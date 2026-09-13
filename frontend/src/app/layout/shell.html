@@ -1,0 +1,117 @@
+<div class="shell" [class.collapsed]="collapsed()" [attr.data-theme]="theme.theme()">
+  <aside class="sidebar" [attr.aria-label]="t('COMMON.MENU')">
+    <div class="sidebar-header">
+      <div class="sidebar-top">
+        <div class="brand-block">
+          <span class="brand-mark" aria-hidden="true">P</span>
+          @if (!collapsed()) {
+            <div class="brand-text">
+              <strong>{{ t('BRAND.NAME') }}</strong>
+              <span>{{ t('BRAND.TAGLINE') }}</span>
+            </div>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="icon-btn collapse-btn"
+          (click)="toggleSidebar()"
+          [attr.title]="collapsed() ? t('COMMON.EXPAND') : t('COMMON.COLLAPSE')"
+          [attr.aria-label]="collapsed() ? t('COMMON.EXPAND') : t('COMMON.COLLAPSE')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            @if (collapsed()) {
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            } @else {
+              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            }
+          </svg>
+        </button>
+      </div>
+
+      <div class="user-card" [attr.title]="userLabel()">
+        <div class="avatar" aria-hidden="true">{{ userLabel().charAt(0) || 'U' }}</div>
+        @if (!collapsed()) {
+          <div class="user-meta">
+            <strong>{{ userLabel() }}</strong>
+            <span>{{ auth.user()?.email }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <nav>
+      @for (page of navItems(); track page.code) {
+        <a
+          [routerLink]="page.route"
+          routerLinkActive="active"
+          [attr.title]="page.label"
+        >
+          <span class="nav-icon" [attr.data-icon]="page.icon" aria-hidden="true"></span>
+          @if (!collapsed()) {
+            <span class="nav-label">{{ page.label }}</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <button type="button" class="logout-btn" (click)="logout()" [attr.title]="t('COMMON.LOGOUT')">
+        <span class="nav-icon" data-icon="logout" aria-hidden="true"></span>
+        @if (!collapsed()) {
+          <span>{{ t('COMMON.LOGOUT') }}</span>
+        }
+      </button>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button type="button" class="icon-btn mobile-toggle" (click)="toggleSidebar()" [attr.aria-label]="t('COMMON.MENU')">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <h1>{{ t('BRAND.NAME') }}</h1>
+      </div>
+
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn surface"
+          (click)="i18n.toggleLanguage()"
+          [attr.title]="t('COMMON.LANGUAGE')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M3 12h18M12 3c2.5 2.8 3.8 5.8 3.8 9S14.5 18.2 12 21c-2.5-2.8-3.8-5.8-3.8-9S9.5 5.8 12 3z" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          </svg>
+          <span class="badge dark">{{ i18n.language() === 'en' ? 'EN' : 'AR' }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="icon-btn surface"
+          (click)="theme.toggle()"
+          [attr.title]="t('COMMON.THEME')"
+        >
+          @if (theme.theme() === 'light') {
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          } @else {
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 7 7 0 0 0 20 14.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            </svg>
+          }
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <router-outlet />
+    </main>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  padding: 1.5rem;
+  color: var(--text);
+  font-family: "Segoe UI", "Tahoma", sans-serif;
+}
+
+.page {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+form {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+input,
+button {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(16, 36, 28, 0.2);
+  font: inherit;
+}
+
+button {
+  background: #1f6b4a;
+  color: white;
+  border: 0;
+  width: fit-content;
+  cursor: pointer;
+}
+
+fieldset {
+  border: 1px solid rgba(16, 36, 28, 0.15);
+  border-radius: 0.35rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(16, 36, 28, 0.1);
+}
+
+.error {
+  color: #c45c4a;
+}

@@ -1,0 +1,24 @@
+<section class="page">
+  <h1>Locations</h1>
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+  @if (auth.hasPermission('Location.Manage')) {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <input formControlName="nameEn" placeholder="Name EN" />
+      <input formControlName="nameAr" placeholder="Name AR" />
+      <select formControlName="type">
+        <option value="1">Branch</option>
+        <option value="2">Warehouse</option>
+      </select>
+      <app-icon-button icon="save" type="submit" tone="primary" label="Save"></app-icon-button>
+    </form>
+  }
+  <ul>
+    @for (item of items(); track item.id) {
+      <li>
+        <strong>{{ item.nameEn }}</strong> / {{ item.nameAr }} — {{ typeLabel(item.type) }}
+      </li>
+    }
+  </ul>
+</section>

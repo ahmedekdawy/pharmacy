@@ -1,0 +1,54 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root,
+html[data-theme='light'] {
+  --bg: #f3efe6;
+  --surface: #fffdf8;
+  --surface-muted: #ebe6db;
+  --text: #14261d;
+  --muted: #5d6f66;
+  --border: rgba(20, 38, 29, 0.12);
+  --accent: #1f6b4a;
+  --accent-strong: #17835a;
+  --sidebar: #143528;
+  --sidebar-text: #eef7f1;
+  --sidebar-border: rgba(238, 247, 241, 0.12);
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  --bg: #0f1713;
+  --surface: #17221c;
+  --surface-muted: #213028;
+  --text: #e8f2ec;
+  --muted: #a3b5ab;
+  --border: rgba(232, 242, 236, 0.12);
+  --accent: #2f9a6a;
+  --accent-strong: #48b984;
+  --sidebar: #0b1410;
+  --sidebar-text: #dceee4;
+  --sidebar-border: rgba(220, 238, 228, 0.1);
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Tahoma", sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

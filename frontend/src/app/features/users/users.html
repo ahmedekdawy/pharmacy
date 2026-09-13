@@ -1,0 +1,67 @@
+<section class="page">
+  <header>
+    <h1>{{ t('APP.USERS') }}</h1>
+  </header>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (auth.hasPermission(editingId() ? 'User.Edit' : 'User.Create')) {
+    <form class="editor" [formGroup]="form" (ngSubmit)="submit()">
+      <input formControlName="email" placeholder="Email" />
+      <input formControlName="password" type="password" [placeholder]="editingId() ? 'New password (optional)' : 'Password'" />
+      <input formControlName="fullNameEn" placeholder="Name EN" />
+      <input formControlName="fullNameAr" placeholder="Name AR" />
+      <select formControlName="roleId">
+        <option value="">No role</option>
+        @for (role of roles(); track role.id) {
+          <option [value]="role.id">{{ role.nameEn }}</option>
+        }
+      </select>
+      @if (editingId()) {
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="isActive" />
+          Active
+        </label>
+      }
+      <div class="form-actions">
+        <app-icon-button
+          icon="save"
+          type="submit"
+          tone="primary"
+          [label]="editingId() ? 'Update user' : 'Create user'"
+        />
+        @if (editingId()) {
+          <app-icon-button icon="close" label="Cancel edit" (pressed)="cancelEdit()" />
+        }
+      </div>
+    </form>
+  }
+
+  <ul>
+    @for (user of users(); track user.id) {
+      <li>
+        <div>
+          <strong>{{ user.fullNameEn }}</strong>
+          <span>{{ user.email }}</span>
+          <span>{{ user.roles.join(', ') }}</span>
+          <em>{{ user.isActive ? 'Active' : 'Inactive' }}</em>
+        </div>
+        <div class="actions">
+          @if (auth.hasPermission('User.Edit')) {
+            <app-icon-button icon="edit" label="Edit user" (pressed)="startEdit(user)" />
+            <app-icon-button icon="delete" tone="danger" label="Delete user" (pressed)="remove(user)" />
+          }
+          @if (auth.hasPermission('User.Activate')) {
+            @if (!user.isActive) {
+              <app-icon-button icon="check" tone="success" label="Activate" (pressed)="setActive(user, true)" />
+            } @else {
+              <app-icon-button icon="ban" tone="danger" label="Deactivate" (pressed)="setActive(user, false)" />
+            }
+          }
+        </div>
+      </li>
+    }
+  </ul>
+</section>

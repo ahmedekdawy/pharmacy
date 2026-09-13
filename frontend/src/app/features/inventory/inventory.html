@@ -1,0 +1,49 @@
+<section class="page">
+  <h1>Inventory</h1>
+  @if (error()) { <p class="error">{{ error() }}</p> }
+
+  @if (auth.hasPermission('Inventory.Adjust')) {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <select formControlName="locationId">
+        <option value="">Location</option>
+        @for (loc of locations(); track loc.id) {
+          <option [value]="loc.id">{{ loc.nameEn }}</option>
+        }
+      </select>
+      <select formControlName="productId">
+        <option value="">Product</option>
+        @for (product of products(); track product.id) {
+          <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
+        }
+      </select>
+      <input formControlName="batchNumber" placeholder="Batch number" />
+      <input formControlName="expiryDate" type="date" />
+      <input formControlName="purchasePrice" type="number" step="0.01" placeholder="Purchase price" />
+      <input formControlName="quantity" type="number" step="0.01" placeholder="Quantity" />
+      <app-icon-button icon="save" type="submit" tone="primary" label="Opening balance"></app-icon-button>
+    </form>
+  }
+
+  <h2>Stock</h2>
+  <ul>
+    @for (item of stock(); track $index) {
+      <li>
+        <strong>{{ item.productCode }}</strong> {{ item.productNameEn }}
+        @ {{ item.locationNameEn }}
+        / batch {{ item.batchNumber || '-' }}
+        / exp {{ item.expiryDate || '-' }}
+        = {{ item.quantity | number: '1.2-2' }}
+      </li>
+    }
+  </ul>
+
+  <h2>Near expiry (90 days)</h2>
+  <ul>
+    @for (item of nearExpiry(); track $index) {
+      <li>
+        {{ item.productCode }} {{ item.productNameEn }} — {{ item.batchNumber }}
+        exp {{ item.expiryDate }} ({{ item.availableQuantity | number: '1.2-2' }})
+      </li>
+    }
+  </ul>
+</section>

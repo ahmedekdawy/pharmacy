@@ -1,0 +1,19 @@
+<section class="hero">
+  <header class="top">
+    <p class="brand">{{ t('BRAND.NAME') }}</p>
+    <div class="actions">
+      <button type="button" class="lang" (click)="setLang('en')">EN</button>
+      <button type="button" class="lang" (click)="setLang('ar')">AR</button>
+      <a routerLink="/login">{{ t('LANDING.LOGIN') }}</a>
+    </div>
+  </header>
+
+  <div class="hero-copy">
+    <h1>{{ t('LANDING.HEADLINE') }}</h1>
+    <p>{{ t('LANDING.SUBTITLE') }}</p>
+    <div class="cta">
+      <a class="primary" routerLink="/login">{{ t('LANDING.CTA_TRIAL') }}</a>
+      <a class="secondary" routerLink="/contact">{{ t('LANDING.CTA_DEMO') }}</a>
+    </div>
+  </div>
+</section>

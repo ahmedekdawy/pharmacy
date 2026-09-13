@@ -1,0 +1,57 @@
+<section class="page">
+  <header>
+    <h1>{{ t('APP.ROLES') }}</h1>
+  </header>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (auth.hasPermission('Role.Manage')) {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <input formControlName="code" placeholder="Code" />
+      <input formControlName="nameEn" placeholder="Name EN" />
+      <input formControlName="nameAr" placeholder="Name AR" />
+
+      <fieldset>
+        <legend>Permissions</legend>
+        @for (permission of permissions(); track permission.id) {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="(form.value.permissionIds ?? []).includes(permission.id)"
+              (change)="togglePermission(permission.id, $any($event.target).checked)"
+            />
+            {{ permission.code }}
+          </label>
+        }
+      </fieldset>
+
+      <fieldset>
+        <legend>Pages</legend>
+        @for (page of pages(); track page.id) {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="(form.value.pageIds ?? []).includes(page.id)"
+              (change)="togglePage(page.id, $any($event.target).checked)"
+            />
+            {{ page.nameEn }} ({{ page.route }})
+          </label>
+        }
+      </fieldset>
+
+      <app-icon-button icon="save" type="submit" tone="primary" [label]="t('COMMON.SAVE')" />
+    </form>
+  }
+
+  <ul>
+    @for (role of roles(); track role.id) {
+      <li>
+        <strong>{{ role.code }}</strong> — {{ role.nameEn }}
+        <div>Permissions: {{ role.permissions.join(', ') }}</div>
+        <div>Pages: {{ role.pages.join(', ') }}</div>
+      </li>
+    }
+  </ul>
+</section>
