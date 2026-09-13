@@ -76,6 +76,7 @@ function iconFor(code: string): string {
     case 'cash-shifts':
     case 'expenses':
     case 'reports':
+    case 'audit':
     case 'settings':
       return 'dashboard';
     case 'users':

@@ -12,7 +12,7 @@ namespace Pharmacy.Api.Controllers;
 [ApiController]
 [Authorize]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/reports")]
+[Route("v{version:apiVersion}/reports")]
 public sealed class ReportsController(IMediator mediator) : ControllerBase
 {
     [HttpGet("sales")]
@@ -22,4 +22,12 @@ public sealed class ReportsController(IMediator mediator) : ControllerBase
         [FromQuery] DateTimeOffset? to,
         CancellationToken cancellationToken)
         => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetSalesReportQuery(from, to), cancellationToken)));
+
+    [HttpGet("profit")]
+    [RequirePermission(PermissionCodes.ReportProfit)]
+    public async Task<ActionResult<ApiResponse<object>>> Profit(
+        [FromQuery] DateTimeOffset? from,
+        [FromQuery] DateTimeOffset? to,
+        CancellationToken cancellationToken)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetProfitReportQuery(from, to), cancellationToken)));
 }

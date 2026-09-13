@@ -12,6 +12,7 @@ if not db:
     raise SystemExit(0)
 
 data.setdefault("ConnectionStrings", {})["DefaultConnection"] = db
+data["PathBase"] = "/api"
 
 jwt = os.environ.get("JWT", "").strip()
 if jwt:

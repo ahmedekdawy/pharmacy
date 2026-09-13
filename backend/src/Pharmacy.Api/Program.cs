@@ -49,6 +49,13 @@ try
 
     await IdentityDataSeeder.SeedAsync(app.Services);
 
+    // Host under /api (IIS app or same-site FTP folder) so public URLs stay /api/v1/...
+    var pathBase = builder.Configuration["PathBase"];
+    if (!string.IsNullOrWhiteSpace(pathBase))
+    {
+        app.UsePathBase(pathBase);
+    }
+
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging();
 

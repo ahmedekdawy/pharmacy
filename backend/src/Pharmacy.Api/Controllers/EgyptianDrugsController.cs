@@ -12,7 +12,7 @@ namespace Pharmacy.Api.Controllers;
 [ApiController]
 [Authorize]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/catalog/egyptian-drugs")]
+[Route("v{version:apiVersion}/catalog/egyptian-drugs")]
 public sealed class EgyptianDrugsController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

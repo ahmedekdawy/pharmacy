@@ -3,6 +3,7 @@
   @if (error()) { <p class="error">{{ error() }}</p> }
 
   @if (auth.hasPermission('Inventory.Adjust')) {
+    <h2>Opening balance</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
       <select formControlName="locationId">
         <option value="">Location</option>
@@ -22,6 +23,55 @@
       <input formControlName="quantity" type="number" step="0.01" placeholder="Quantity" />
       <app-icon-button icon="save" type="submit" tone="primary" label="Opening balance"></app-icon-button>
     </form>
+
+    <h2>Transfer stock</h2>
+    <form [formGroup]="transferForm" (ngSubmit)="transfer()">
+      <select formControlName="fromLocationId">
+        <option value="">From</option>
+        @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
+      </select>
+      <select formControlName="toLocationId">
+        <option value="">To</option>
+        @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
+      </select>
+      <select formControlName="productId">
+        <option value="">Product</option>
+        @for (product of products(); track product.id) {
+          <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
+        }
+      </select>
+      <select formControlName="batchId">
+        <option value="">Batch</option>
+        @for (b of batchesFor(transferForm.value.productId, transferForm.value.fromLocationId); track b.batchId) {
+          <option [value]="b.batchId">{{ b.batchNumber }} ({{ b.quantity }})</option>
+        }
+      </select>
+      <input formControlName="quantity" type="number" step="0.01" placeholder="Qty" />
+      <app-icon-button icon="check" type="submit" tone="primary" label="Transfer" />
+    </form>
+
+    <h2>Adjust stock</h2>
+    <form [formGroup]="adjustForm" (ngSubmit)="adjust()">
+      <select formControlName="locationId">
+        <option value="">Location</option>
+        @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
+      </select>
+      <select formControlName="productId">
+        <option value="">Product</option>
+        @for (product of products(); track product.id) {
+          <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
+        }
+      </select>
+      <select formControlName="batchId">
+        <option value="">Batch</option>
+        @for (b of batchesFor(adjustForm.value.productId, adjustForm.value.locationId); track b.batchId) {
+          <option [value]="b.batchId">{{ b.batchNumber }} ({{ b.quantity }})</option>
+        }
+      </select>
+      <input formControlName="quantityDelta" type="number" step="0.01" placeholder="Delta (+/-)" />
+      <input formControlName="reason" placeholder="Reason" />
+      <app-icon-button icon="edit" type="submit" tone="primary" label="Adjust" />
+    </form>
   }
 
   <h2>Stock</h2>
@@ -34,6 +84,13 @@
         / exp {{ item.expiryDate || '-' }}
         = {{ item.quantity | number: '1.2-2' }}
       </li>
+    }
+  </ul>
+
+  <h2>Low stock (≤ 10)</h2>
+  <ul>
+    @for (item of lowStock(); track $index) {
+      <li>{{ item.productCode }} {{ item.productNameEn }} = {{ item.availableQuantity | number: '1.2-2' }}</li>
     }
   </ul>
 

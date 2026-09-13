@@ -89,7 +89,7 @@ jobs:
           JWT: ${{ secrets.JWT_KEY }}
         run: python3 .github/scripts/write-backend-production-settings.py
 
-      - name: Deploy via FTP to runasp.net
+      - name: Deploy via FTP to runasp.net (/api)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -97,7 +97,8 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           local-dir: ./deploy/
-          server-dir: ${{ vars.FTP_SERVER_DIR || './' }}
+          # Same FTP host as frontend; API lives in /api subfolder
+          server-dir: ${{ vars.FTP_API_DIR || './api/' }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*

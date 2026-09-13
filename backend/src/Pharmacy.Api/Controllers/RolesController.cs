@@ -14,7 +14,7 @@ namespace Pharmacy.Api.Controllers;
 [ApiController]
 [Authorize]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/roles")]
+[Route("v{version:apiVersion}/roles")]
 public sealed class RolesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

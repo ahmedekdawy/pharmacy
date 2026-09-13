@@ -19,7 +19,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./layout/shell').then((m) => m.AppShell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'products' },
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'dashboard',
+        canActivate: [permissionGuard('Report.Sales')],
+        loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.DashboardPage)
+      },
       {
         path: 'products',
         canActivate: [permissionGuard('Product.View')],
@@ -84,6 +89,11 @@ export const routes: Routes = [
         path: 'reports',
         canActivate: [permissionGuard('Report.Sales')],
         loadComponent: () => import('./features/reports/reports').then((m) => m.ReportsPage)
+      },
+      {
+        path: 'audit',
+        canActivate: [permissionGuard('Audit.View')],
+        loadComponent: () => import('./features/audit/audit').then((m) => m.AuditPage)
       },
       {
         path: 'settings',

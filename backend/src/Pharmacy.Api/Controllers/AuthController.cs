@@ -9,7 +9,7 @@ namespace Pharmacy.Api.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/auth")]
+[Route("v{version:apiVersion}/auth")]
 public sealed class AuthController(IMediator mediator) : ControllerBase
 {
     [AllowAnonymous]

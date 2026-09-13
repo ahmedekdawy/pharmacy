@@ -65,6 +65,8 @@ public static class IdentityDataSeeder
             (PermissionCodes.ExpenseView, "Expenses", "View expenses", "عرض المصروفات"),
             (PermissionCodes.ExpenseManage, "Expenses", "Manage expenses", "إدارة المصروفات"),
             (PermissionCodes.ReportSales, "Reports", "Sales reports", "تقارير المبيعات"),
+            (PermissionCodes.ReportProfit, "Reports", "Profit reports", "تقارير الأرباح"),
+            (PermissionCodes.AuditView, "Audit", "View audit logs", "عرض سجل التدقيق"),
             (PermissionCodes.SettingsManage, "Settings", "Manage settings", "إدارة الإعدادات")
         };
 
@@ -103,9 +105,10 @@ public static class IdentityDataSeeder
             ("cash-shifts", "/app/cash-shifts", "Cash Shifts", "الورديات", 12),
             ("expenses", "/app/expenses", "Expenses", "المصروفات", 13),
             ("reports", "/app/reports", "Reports", "التقارير", 14),
-            ("settings", "/app/settings", "Settings", "الإعدادات", 15),
-            ("users", "/app/users", "Users", "المستخدمون", 16),
-            ("roles", "/app/roles", "Roles", "الأدوار", 17)
+            ("audit", "/app/audit", "Audit Logs", "سجل التدقيق", 15),
+            ("settings", "/app/settings", "Settings", "الإعدادات", 16),
+            ("users", "/app/users", "Users", "المستخدمون", 17),
+            ("roles", "/app/roles", "Roles", "الأدوار", 18)
         };
 
         var existing = await db.Pages.IgnoreQueryFilters().Select(x => x.Code).ToListAsync(cancellationToken);

@@ -75,14 +75,21 @@ Users can be activated/deactivated via:
 
 ## Deploy pipelines (FTP → runasp.net)
 
-Two independent GitHub Actions workflows:
+Frontend and API share **one FTP account**. Layout on the server:
 
-| Workflow | File | Deploys |
+```text
+./                 ← Angular (site root)
+./api/             ← ASP.NET Core API
+```
+
+| Workflow | File | FTP folder |
 |---|---|---|
-| Backend | `.github/workflows/deploy-backend.yml` | Published ASP.NET Core API via FTP |
-| Frontend | `.github/workflows/deploy-frontend.yml` | Angular static site via FTP |
+| Frontend | `.github/workflows/deploy-frontend.yml` | `./` (site root) |
+| Backend | `.github/workflows/deploy-backend.yml` | `./api/` |
 
 Triggers: push to `master` (path-filtered), pull request (build only), or manual `workflow_dispatch`.
+
+Frontend sync **excludes** `api/**` so Angular deploys never wipe the API folder. SPA `web.config` already skips rewriting `/api` routes.
 
 ### GitHub Environments & secrets
 
@@ -91,7 +98,7 @@ Create environments:
 - `production-backend`
 - `production-frontend`
 
-**Shared FTP secrets** (set on each environment, or repo secrets):
+**Shared FTP secrets** (same values on both environments, or repo secrets):
 
 | Secret | Example |
 |---|---|
@@ -99,11 +106,12 @@ Create environments:
 | `FTP_USERNAME` | your FTP user |
 | `FTP_PASSWORD` | your FTP password |
 
-**Optional variable**
+**Optional variables**
 
-| Variable | Example |
-|---|---|
-| `FTP_SERVER_DIR` | `./` or `/site1/` (folder on FTP for that app) |
+| Variable | Default | Purpose |
+|---|---|---|
+| `FTP_SERVER_DIR` | `./` | Frontend (site root) folder |
+| `FTP_API_DIR` | `./api/` | API subfolder on the same FTP |
 
 **Backend-only secrets** (`production-backend`)
 
@@ -116,20 +124,22 @@ Create environments:
 
 | Secret | Purpose |
 |---|---|
-| `API_BASE_URL` | e.g. `https://api.yourdomain.com/api/v1` (injected at build time) |
+| `API_BASE_URL` | Optional. Default production build uses `/api/v1` (same host). Set only if the API URL differs. |
 
 ### runasp.net tips
 
-1. Point each site/app to its own FTP folder (`FTP_SERVER_DIR`).
-2. Backend: enable ASP.NET Core / install hosting bundle support in the panel; upload goes to the site root (often `wwwroot` / site folder).
-3. Frontend: `web.config` is included for Angular route rewrite on IIS.
-4. If API and UI are on different hosts, set `API_BASE_URL` for the frontend pipeline.
+1. Create an `api` folder under the site (first backend deploy can create it).
+2. In the hosting panel, convert `/api` to an **IIS Application** (ASP.NET Core) if required.
+3. Enable ASP.NET Core / hosting bundle support for that application.
+4. Frontend root `web.config` rewrites Angular routes and leaves `/api` alone.
+5. API uses `PathBase=/api` with routes `v1/...`, so the public URL is still `https://your-site/api/v1/...`.
+6. Smoke-test `https://your-site/api/health`, then the site root.
 
 ## Foundation progress (§60)
 
-Done: Users/Permissions, Products, Categories, Brands, Locations, Inventory, Suppliers, Purchases (receive), Customers, Sales/POS, Sale returns, Cash shifts, Expenses, Sales reports, Tenant settings, Audit log table, app shell nav.
+Done: Users/Permissions, Products, Categories, Brands, Locations, Inventory (opening balance, transfer, adjust, low stock, near expiry), Suppliers, Purchases, Customers, Sales/POS, Sale returns, Cash shifts, Expenses, Sales + Profit reports, Dashboard, Audit logs, Tenant settings, Egyptian drug catalog search, FTP deploy pipelines.
 
-Next: Sale purchase returns depth, profit reports, transfers, richer POS UI.
+Next (future §61): Smart reordering, purchase returns depth, richer POS UI.
 
 ## Standards baked in
 

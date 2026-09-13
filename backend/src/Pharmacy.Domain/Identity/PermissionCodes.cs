@@ -52,6 +52,9 @@ public static class PermissionCodes
     public const string ExpenseManage = "Expense.Manage";
 
     public const string ReportSales = "Report.Sales";
+    public const string ReportProfit = "Report.Profit";
+
+    public const string AuditView = "Audit.View";
 
     public const string SettingsManage = "Settings.Manage";
 }

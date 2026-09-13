@@ -12,7 +12,7 @@ namespace Pharmacy.Api.Controllers;
 [ApiController]
 [Authorize]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/cash-shifts")]
+[Route("v{version:apiVersion}/cash-shifts")]
 public sealed class CashShiftsController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
