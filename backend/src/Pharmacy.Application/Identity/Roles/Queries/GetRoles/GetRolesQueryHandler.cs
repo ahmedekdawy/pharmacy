@@ -27,14 +27,14 @@ public sealed class GetRolesQueryHandler(
             from rp in db.RolePermissions.AsNoTracking()
             join p in db.Permissions.AsNoTracking() on rp.PermissionId equals p.Id
             where roleIds.Contains(rp.RoleId)
-            select new { rp.RoleId, p.Code }
+            select new { rp.RoleId, p.Id, p.Code }
         ).ToListAsync(cancellationToken);
 
         var pages = await (
             from rp in db.RolePages.AsNoTracking()
             join p in db.Pages.AsNoTracking() on rp.PageId equals p.Id
             where roleIds.Contains(rp.RoleId)
-            select new { rp.RoleId, p.Code }
+            select new { rp.RoleId, p.Id, p.Code }
         ).ToListAsync(cancellationToken);
 
         return roles.Select(r => new RoleDto(
@@ -44,7 +44,9 @@ public sealed class GetRolesQueryHandler(
             r.NameAr,
             r.IsActive,
             permissions.Where(x => x.RoleId == r.Id).Select(x => x.Code).Distinct().ToList(),
-            pages.Where(x => x.RoleId == r.Id).Select(x => x.Code).Distinct().ToList()
+            pages.Where(x => x.RoleId == r.Id).Select(x => x.Code).Distinct().ToList(),
+            permissions.Where(x => x.RoleId == r.Id).Select(x => x.Id).Distinct().ToList(),
+            pages.Where(x => x.RoleId == r.Id).Select(x => x.Id).Distinct().ToList()
         )).ToList();
     }
 }

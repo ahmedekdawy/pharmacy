@@ -29,4 +29,12 @@ public sealed class SettingsController(IMediator mediator) : ControllerBase
         await mediator.Send(command, cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { command.Key }));
     }
+
+    [HttpDelete("{key}")]
+    [RequirePermission(PermissionCodes.SettingsManage)]
+    public async Task<ActionResult<ApiResponse<object>>> Delete(string key, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteTenantSettingCommand(key), cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { key }));
+    }
 }

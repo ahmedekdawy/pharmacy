@@ -74,11 +74,17 @@ const en: Record<string, string> = {
   'PRODUCTS.NO_MATCHES': 'No matching drugs found.',
   'PRODUCTS.SELECTED': 'Selected from catalog — edit before saving',
   'PRODUCTS.EDIT_BEFORE_SAVE': 'Review and edit product fields before saving.',
+  'PRODUCTS.EDITING': 'Editing product — update fields then save.',
   'PRODUCTS.CODE': 'Code',
   'PRODUCTS.NAME_EN': 'Name (EN)',
   'PRODUCTS.NAME_AR': 'Name (AR)',
   'PRODUCTS.BARCODE': 'Barcode',
-  'PRODUCTS.PRICE': 'Price'
+  'PRODUCTS.PRICE': 'Price',
+  'PRODUCTS.ACTIVE': 'Active',
+  'PRODUCTS.INACTIVE': 'Inactive',
+  'PRODUCTS.EDIT': 'Edit product',
+  'PRODUCTS.UPDATE': 'Update product',
+  'PRODUCTS.DELETE': 'Delete product'
 };
 
 const ar: Record<string, string> = {
@@ -115,9 +121,15 @@ const ar: Record<string, string> = {
   'PRODUCTS.NO_MATCHES': 'لا توجد نتائج مطابقة.',
   'PRODUCTS.SELECTED': 'تم الاختيار من القاعدة — عدّل قبل الحفظ',
   'PRODUCTS.EDIT_BEFORE_SAVE': 'راجع وعدّل بيانات المنتج قبل الحفظ.',
+  'PRODUCTS.EDITING': 'تعديل المنتج — حدّث الحقول ثم احفظ.',
   'PRODUCTS.CODE': 'الكود',
   'PRODUCTS.NAME_EN': 'الاسم (إنجليزي)',
   'PRODUCTS.NAME_AR': 'الاسم (عربي)',
   'PRODUCTS.BARCODE': 'الباركود',
-  'PRODUCTS.PRICE': 'السعر'
+  'PRODUCTS.PRICE': 'السعر',
+  'PRODUCTS.ACTIVE': 'نشط',
+  'PRODUCTS.INACTIVE': 'موقوف',
+  'PRODUCTS.EDIT': 'تعديل المنتج',
+  'PRODUCTS.UPDATE': 'تحديث المنتج',
+  'PRODUCTS.DELETE': 'حذف المنتج'
 };

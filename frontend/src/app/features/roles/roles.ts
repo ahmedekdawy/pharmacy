@@ -6,35 +6,13 @@ import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { IconButton } from '../../shared/ui/icon-button';
 
-interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  errors: string[];
-}
-
+interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface RoleDto {
-  id: string;
-  code: string;
-  nameEn: string;
-  nameAr: string;
-  isActive: boolean;
-  permissions: string[];
-  pages: string[];
+  id: string; code: string; nameEn: string; nameAr: string; isActive: boolean;
+  permissions: string[]; pages: string[]; permissionIds: string[]; pageIds: string[];
 }
-
-interface PermissionDto {
-  id: string;
-  code: string;
-  module: string;
-  nameEn: string;
-}
-
-interface PageDto {
-  id: string;
-  code: string;
-  route: string;
-  nameEn: string;
-}
+interface PermissionDto { id: string; code: string; module: string; nameEn: string; }
+interface PageDto { id: string; code: string; route: string; nameEn: string; }
 
 @Component({
   selector: 'app-roles',
@@ -52,6 +30,7 @@ export class RolesPage implements OnInit {
   readonly roles = signal<RoleDto[]>([]);
   readonly permissions = signal<PermissionDto[]>([]);
   readonly pages = signal<PageDto[]>([]);
+  readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.group({
@@ -59,7 +38,8 @@ export class RolesPage implements OnInit {
     nameEn: ['', Validators.required],
     nameAr: ['', Validators.required],
     permissionIds: [[] as string[]],
-    pageIds: [[] as string[]]
+    pageIds: [[] as string[]],
+    isActive: [true]
   });
 
   ngOnInit(): void {
@@ -72,9 +52,7 @@ export class RolesPage implements OnInit {
     });
   }
 
-  t(key: string): string {
-    return this.i18n.translate(key);
-  }
+  t(key: string): string { return this.i18n.translate(key); }
 
   reload(): void {
     this.http.get<ApiResponse<RoleDto[]>>(`${environment.apiBaseUrl}/roles`).subscribe({
@@ -83,42 +61,59 @@ export class RolesPage implements OnInit {
     });
   }
 
+  startEdit(role: RoleDto): void {
+    this.editingId.set(role.id);
+    this.form.patchValue({
+      code: role.code,
+      nameEn: role.nameEn,
+      nameAr: role.nameAr,
+      permissionIds: [...(role.permissionIds ?? [])],
+      pageIds: [...(role.pageIds ?? [])],
+      isActive: role.isActive
+    });
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+    this.form.reset({ permissionIds: [], pageIds: [], isActive: true });
+  }
+
   togglePermission(id: string, checked: boolean): void {
     const current = [...(this.form.value.permissionIds ?? [])];
-    this.form.patchValue({
-      permissionIds: checked ? [...current, id] : current.filter((x) => x !== id)
-    });
+    this.form.patchValue({ permissionIds: checked ? [...current, id] : current.filter((x) => x !== id) });
   }
 
   togglePage(id: string, checked: boolean): void {
     const current = [...(this.form.value.pageIds ?? [])];
-    this.form.patchValue({
-      pageIds: checked ? [...current, id] : current.filter((x) => x !== id)
-    });
+    this.form.patchValue({ pageIds: checked ? [...current, id] : current.filter((x) => x !== id) });
   }
 
   submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const value = this.form.getRawValue();
-    this.http
-      .post(`${environment.apiBaseUrl}/roles`, {
-        code: value.code,
-        nameEn: value.nameEn,
-        nameAr: value.nameAr,
-        permissionIds: value.permissionIds,
-        pageIds: value.pageIds,
-        isActive: true
-      })
-      .subscribe({
-        next: () => {
-          this.form.reset({ permissionIds: [], pageIds: [] });
-          this.reload();
-        },
-        error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Create failed')
-      });
+    const body = {
+      code: value.code,
+      nameEn: value.nameEn,
+      nameAr: value.nameAr,
+      permissionIds: value.permissionIds,
+      pageIds: value.pageIds,
+      isActive: !!value.isActive
+    };
+    const id = this.editingId();
+    const req$ = id
+      ? this.http.put(`${environment.apiBaseUrl}/roles/${id}`, body)
+      : this.http.post(`${environment.apiBaseUrl}/roles`, body);
+    req$.subscribe({
+      next: () => { this.cancelEdit(); this.reload(); },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Save failed')
+    });
+  }
+
+  remove(role: RoleDto): void {
+    if (!confirm(`Delete role ${role.code}?`)) return;
+    this.http.delete(`${environment.apiBaseUrl}/roles/${role.id}`).subscribe({
+      next: () => { if (this.editingId() === role.id) this.cancelEdit(); this.reload(); },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
+    });
   }
 }

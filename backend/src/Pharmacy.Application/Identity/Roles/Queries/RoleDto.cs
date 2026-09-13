@@ -7,4 +7,6 @@ public sealed record RoleDto(
     string NameAr,
     bool IsActive,
     IReadOnlyList<string> Permissions,
-    IReadOnlyList<string> Pages);
+    IReadOnlyList<string> Pages,
+    IReadOnlyList<Guid> PermissionIds,
+    IReadOnlyList<Guid> PageIds);

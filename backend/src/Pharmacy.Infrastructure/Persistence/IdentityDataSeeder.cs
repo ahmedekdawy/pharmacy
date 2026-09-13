@@ -40,6 +40,7 @@ public static class IdentityDataSeeder
             (PermissionCodes.ProductView, "Products", "View products", "عرض المنتجات"),
             (PermissionCodes.ProductCreate, "Products", "Create products", "إنشاء المنتجات"),
             (PermissionCodes.ProductEdit, "Products", "Edit products", "تعديل المنتجات"),
+            (PermissionCodes.ProductDelete, "Products", "Delete products", "حذف المنتجات"),
             (PermissionCodes.LocationView, "Locations", "View locations", "عرض المواقع"),
             (PermissionCodes.LocationManage, "Locations", "Manage locations", "إدارة المواقع"),
             (PermissionCodes.CategoryView, "Categories", "View categories", "عرض التصنيفات"),

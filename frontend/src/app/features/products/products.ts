@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse, ApiService, ProductDto } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { IconButton } from '../../shared/ui/icon-button';
 
@@ -31,11 +32,13 @@ export class Products implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly search$ = new Subject<string>();
   private searchSub?: Subscription;
+  readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
 
   readonly products = signal<ProductDto[]>([]);
   readonly catalogResults = signal<EgyptianDrug[]>([]);
   readonly selectedDrug = signal<EgyptianDrug | null>(null);
+  readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
   readonly catalogLoading = signal(false);
@@ -47,7 +50,8 @@ export class Products implements OnInit, OnDestroy {
     nameAr: ['', Validators.required],
     nameEn: ['', Validators.required],
     barcode: [''],
-    sellingPrice: [0, [Validators.required, Validators.min(0)]]
+    sellingPrice: [0, [Validators.required, Validators.min(0)]],
+    isActive: [true]
   });
 
   ngOnInit(): void {
@@ -96,6 +100,7 @@ export class Products implements OnInit, OnDestroy {
   }
 
   selectDrug(drug: EgyptianDrug): void {
+    this.editingId.set(null);
     this.selectedDrug.set(drug);
     this.catalogOpen.set(false);
     this.catalogSearch.setValue(drug.commercialNameEn || drug.commercialNameAr);
@@ -104,22 +109,42 @@ export class Products implements OnInit, OnDestroy {
       nameEn: drug.commercialNameEn || drug.scientificName,
       nameAr: drug.commercialNameAr || drug.commercialNameEn,
       barcode: '',
-      sellingPrice: Number(drug.priceEgp) || 0
+      sellingPrice: Number(drug.priceEgp) || 0,
+      isActive: true
     });
     this.form.markAsDirty();
   }
 
-  clearSelection(): void {
+  startEdit(product: ProductDto): void {
+    this.selectedDrug.set(null);
+    this.catalogOpen.set(false);
+    this.editingId.set(product.id);
+    this.form.patchValue({
+      code: product.code,
+      nameEn: product.nameEn,
+      nameAr: product.nameAr,
+      barcode: product.barcode ?? '',
+      sellingPrice: product.sellingPrice,
+      isActive: product.isActive
+    });
+  }
+
+  cancelEdit(): void {
+    this.clearForm();
+  }
+
+  clearForm(): void {
+    this.editingId.set(null);
     this.selectedDrug.set(null);
     this.catalogSearch.setValue('');
     this.catalogResults.set([]);
     this.catalogOpen.set(false);
-    this.form.reset({ sellingPrice: 0 });
+    this.form.reset({ sellingPrice: 0, isActive: true });
   }
 
   reload(): void {
     this.loading.set(true);
-    this.api.searchProducts().subscribe({
+    this.api.searchProducts('', 1, 100).subscribe({
       next: (res) => {
         this.products.set(res.data?.items ?? []);
         this.loading.set(false);
@@ -138,21 +163,50 @@ export class Products implements OnInit, OnDestroy {
     }
 
     const value = this.form.getRawValue();
-    this.api
-      .createProduct({
-        code: value.code!,
-        nameAr: value.nameAr!,
-        nameEn: value.nameEn!,
-        barcode: value.barcode || undefined,
-        sellingPrice: Number(value.sellingPrice)
-      })
-      .subscribe({
+    const editingId = this.editingId();
+    const payload = {
+      code: value.code!,
+      nameAr: value.nameAr!,
+      nameEn: value.nameEn!,
+      barcode: value.barcode || undefined,
+      sellingPrice: Number(value.sellingPrice),
+      isActive: !!value.isActive
+    };
+
+    if (editingId) {
+      this.api.updateProduct(editingId, payload).subscribe({
         next: () => {
-          this.clearSelection();
+          this.clearForm();
           this.reload();
         },
-        error: () => this.error.set('Create product failed.')
+        error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Update product failed.')
       });
+      return;
+    }
+
+    this.api.createProduct(payload).subscribe({
+      next: () => {
+        this.clearForm();
+        this.reload();
+      },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Create product failed.')
+    });
+  }
+
+  remove(product: ProductDto): void {
+    if (!confirm(`Delete product ${product.code}?`)) {
+      return;
+    }
+
+    this.api.deleteProduct(product.id).subscribe({
+      next: () => {
+        if (this.editingId() === product.id) {
+          this.clearForm();
+        }
+        this.reload();
+      },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete product failed.')
+    });
   }
 }
 

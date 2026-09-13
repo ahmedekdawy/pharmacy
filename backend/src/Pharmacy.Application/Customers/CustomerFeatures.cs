@@ -58,3 +58,59 @@ public sealed class CreateCustomerCommandHandler(IPharmacyDbContext db, ICurrent
         return entity.Id;
     }
 }
+
+public sealed record UpdateCustomerCommand(
+    Guid Id,
+    string Code,
+    string NameEn,
+    string NameAr,
+    string? Phone,
+    bool IsActive) : IRequest;
+
+public sealed record DeleteCustomerCommand(Guid Id) : IRequest;
+
+public sealed class UpdateCustomerCommandValidator : AbstractValidator<UpdateCustomerCommand>
+{
+    public UpdateCustomerCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.NameEn).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.NameAr).NotEmpty().MaximumLength(256);
+    }
+}
+
+public sealed class UpdateCustomerCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<UpdateCustomerCommand>
+{
+    public async Task Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var entity = await db.Customers.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Customer not found.");
+
+        var code = request.Code.Trim();
+        if (await db.Customers.AnyAsync(x => x.Code == code && x.Id != request.Id, cancellationToken))
+            throw new InvalidOperationException("Customer code already exists.");
+
+        entity.Code = code;
+        entity.NameEn = request.NameEn.Trim();
+        entity.NameAr = request.NameAr.Trim();
+        entity.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+        entity.IsActive = request.IsActive;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class DeleteCustomerCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<DeleteCustomerCommand>
+{
+    public async Task Handle(DeleteCustomerCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var entity = await db.Customers.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Customer not found.");
+        db.Customers.Remove(entity);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}

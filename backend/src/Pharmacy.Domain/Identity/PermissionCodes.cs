@@ -16,6 +16,7 @@ public static class PermissionCodes
     public const string ProductView = "Product.View";
     public const string ProductCreate = "Product.Create";
     public const string ProductEdit = "Product.Edit";
+    public const string ProductDelete = "Product.Delete";
 
     public const string LocationView = "Location.View";
     public const string LocationManage = "Location.Manage";

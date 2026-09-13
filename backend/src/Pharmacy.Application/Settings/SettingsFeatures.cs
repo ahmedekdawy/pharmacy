@@ -9,6 +9,7 @@ namespace Pharmacy.Application.Settings;
 public sealed record TenantSettingDto(string Key, string Value);
 public sealed record GetTenantSettingsQuery : IRequest<IReadOnlyList<TenantSettingDto>>;
 public sealed record UpsertTenantSettingCommand(string Key, string Value) : IRequest;
+public sealed record DeleteTenantSettingCommand(string Key) : IRequest;
 
 public sealed class UpsertTenantSettingCommandValidator : AbstractValidator<UpsertTenantSettingCommand>
 {
@@ -57,6 +58,20 @@ public sealed class UpsertTenantSettingCommandHandler(IPharmacyDbContext db, ICu
             existing.Value = request.Value;
         }
 
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class DeleteTenantSettingCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<DeleteTenantSettingCommand>
+{
+    public async Task Handle(DeleteTenantSettingCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var key = request.Key.Trim();
+        var existing = await db.TenantSettings.FirstOrDefaultAsync(x => x.Key == key, cancellationToken)
+            ?? throw new InvalidOperationException("Setting not found.");
+        db.TenantSettings.Remove(existing);
         await db.SaveChangesAsync(cancellationToken);
     }
 }

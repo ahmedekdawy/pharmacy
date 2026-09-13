@@ -23,12 +23,26 @@ interface SupplierDto { id: string; code: string; nameEn: string; nameAr: string
         <input formControlName="nameAr" placeholder="Name AR" />
         <input formControlName="phone" placeholder="Phone" />
         <input formControlName="email" placeholder="Email" />
-        <app-icon-button icon="save" type="submit" tone="primary" label="Save" />
+        @if (editingId()) {
+          <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
+        }
+        <div class="form-actions">
+          <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? 'Update' : 'Save'" />
+          @if (editingId()) { <app-icon-button icon="close" label="Cancel" (pressed)="cancelEdit()" /> }
+        </div>
       </form>
     }
     <ul>
       @for (item of items(); track item.id) {
-        <li><strong>{{ item.code }}</strong> — {{ item.nameEn }} / {{ item.nameAr }}</li>
+        <li>
+          <div><strong>{{ item.code }}</strong> — {{ item.nameEn }} / {{ item.nameAr }}</div>
+          @if (auth.hasPermission('Supplier.Manage')) {
+            <div class="actions">
+              <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(item)" />
+              <app-icon-button icon="delete" tone="danger" label="Delete" (pressed)="remove(item)" />
+            </div>
+          }
+        </li>
       }
     </ul>
   </section>`,
@@ -37,7 +51,10 @@ interface SupplierDto { id: string; code: string; nameEn: string; nameAr: string
     .page { max-width:56rem; margin:0 auto; }
     form { display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.75rem; margin-bottom:1.25rem; align-items:center; }
     input { padding:.7rem .8rem; border-radius:.35rem; border:1px solid var(--border); font:inherit; background:var(--surface); color:var(--text); }
-    ul { list-style:none; padding:0; } li { padding:.75rem 0; border-bottom:1px solid var(--border); }
+    .form-actions,.actions { display:flex; gap:.45rem; align-items:center; }
+    .active-toggle { display:flex; align-items:center; gap:.4rem; }
+    ul { list-style:none; padding:0; }
+    li { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.75rem 0; border-bottom:1px solid var(--border); }
     .error { color:#c45c4a; }
   `]
 })
@@ -46,13 +63,15 @@ export class SuppliersPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
   readonly items = signal<SupplierDto[]>([]);
+  readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly form = this.fb.group({
     code: ['', Validators.required],
     nameEn: ['', Validators.required],
     nameAr: ['', Validators.required],
     phone: [''],
-    email: ['']
+    email: [''],
+    isActive: [true]
   });
 
   ngOnInit(): void { this.reload(); }
@@ -64,11 +83,37 @@ export class SuppliersPage implements OnInit {
     });
   }
 
+  startEdit(item: SupplierDto): void {
+    this.editingId.set(item.id);
+    this.form.patchValue({
+      code: item.code, nameEn: item.nameEn, nameAr: item.nameAr,
+      phone: item.phone ?? '', email: item.email ?? '', isActive: item.isActive
+    });
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+    this.form.reset({ isActive: true });
+  }
+
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.http.post(`${environment.apiBaseUrl}/suppliers`, { ...this.form.getRawValue(), isActive: true }).subscribe({
-      next: () => { this.form.reset(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Create failed')
+    const body = { ...this.form.getRawValue(), isActive: !!this.form.value.isActive };
+    const id = this.editingId();
+    const req$ = id
+      ? this.http.put(`${environment.apiBaseUrl}/suppliers/${id}`, body)
+      : this.http.post(`${environment.apiBaseUrl}/suppliers`, body);
+    req$.subscribe({
+      next: () => { this.cancelEdit(); this.reload(); },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Save failed')
+    });
+  }
+
+  remove(item: SupplierDto): void {
+    if (!confirm(`Delete ${item.code}?`)) return;
+    this.http.delete(`${environment.apiBaseUrl}/suppliers/${item.id}`).subscribe({
+      next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
     });
   }
 }

@@ -5,12 +5,28 @@
     <form [formGroup]="form" (ngSubmit)="submit()">
       <input formControlName="nameEn" placeholder="Name EN" />
       <input formControlName="nameAr" placeholder="Name AR" />
-      <app-icon-button icon="save" type="submit" tone="primary" label="Save"></app-icon-button>
+      @if (editingId()) {
+        <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
+      }
+      <div class="form-actions">
+        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? 'Update' : 'Save'" />
+        @if (editingId()) {
+          <app-icon-button icon="close" label="Cancel" (pressed)="cancelEdit()" />
+        }
+      </div>
     </form>
   }
   <ul>
     @for (item of items(); track item.id) {
-      <li><strong>{{ item.nameEn }}</strong> / {{ item.nameAr }}</li>
+      <li>
+        <div><strong>{{ item.nameEn }}</strong> / {{ item.nameAr }}</div>
+        @if (auth.hasPermission('Brand.Manage')) {
+          <div class="actions">
+            <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(item)" />
+            <app-icon-button icon="delete" tone="danger" label="Delete" (pressed)="remove(item)" />
+          </div>
+        }
+      </li>
     }
   </ul>
 </section>

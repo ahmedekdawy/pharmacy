@@ -49,4 +49,23 @@ export class ApiService {
   }): Observable<ApiResponse<{ id: string }>> {
     return this.http.post<ApiResponse<{ id: string }>>(`${this.baseUrl}/products`, body);
   }
+
+  updateProduct(
+    id: string,
+    body: {
+      code: string;
+      nameAr: string;
+      nameEn: string;
+      barcode?: string;
+      categoryId?: string;
+      sellingPrice: number;
+      isActive: boolean;
+    }
+  ): Observable<ApiResponse<{ id: string }>> {
+    return this.http.put<ApiResponse<{ id: string }>>(`${this.baseUrl}/products/${id}`, body);
+  }
+
+  deleteProduct(id: string): Observable<ApiResponse<{ id: string }>> {
+    return this.http.delete<ApiResponse<{ id: string }>>(`${this.baseUrl}/products/${id}`);
+  }
 }

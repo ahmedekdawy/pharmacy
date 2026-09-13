@@ -65,3 +65,61 @@ public sealed class CreateSupplierCommandHandler(IPharmacyDbContext db, ICurrent
         return entity.Id;
     }
 }
+
+public sealed record UpdateSupplierCommand(
+    Guid Id,
+    string Code,
+    string NameEn,
+    string NameAr,
+    string? Phone,
+    string? Email,
+    bool IsActive) : IRequest;
+
+public sealed record DeleteSupplierCommand(Guid Id) : IRequest;
+
+public sealed class UpdateSupplierCommandValidator : AbstractValidator<UpdateSupplierCommand>
+{
+    public UpdateSupplierCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.NameEn).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.NameAr).NotEmpty().MaximumLength(256);
+    }
+}
+
+public sealed class UpdateSupplierCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<UpdateSupplierCommand>
+{
+    public async Task Handle(UpdateSupplierCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var entity = await db.Suppliers.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Supplier not found.");
+
+        var code = request.Code.Trim();
+        if (await db.Suppliers.AnyAsync(x => x.Code == code && x.Id != request.Id, cancellationToken))
+            throw new InvalidOperationException("Supplier code already exists.");
+
+        entity.Code = code;
+        entity.NameEn = request.NameEn.Trim();
+        entity.NameAr = request.NameAr.Trim();
+        entity.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+        entity.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+        entity.IsActive = request.IsActive;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class DeleteSupplierCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<DeleteSupplierCommand>
+{
+    public async Task Handle(DeleteSupplierCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var entity = await db.Suppliers.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Supplier not found.");
+        db.Suppliers.Remove(entity);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}

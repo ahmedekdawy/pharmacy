@@ -41,16 +41,33 @@
         }
       </fieldset>
 
-      <app-icon-button icon="save" type="submit" tone="primary" [label]="t('COMMON.SAVE')" />
+      @if (editingId()) {
+        <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
+      }
+
+      <div class="form-actions">
+        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? 'Update' : t('COMMON.SAVE')" />
+        @if (editingId()) {
+          <app-icon-button icon="close" label="Cancel" (pressed)="cancelEdit()" />
+        }
+      </div>
     </form>
   }
 
   <ul>
     @for (role of roles(); track role.id) {
       <li>
-        <strong>{{ role.code }}</strong> — {{ role.nameEn }}
-        <div>Permissions: {{ role.permissions.join(', ') }}</div>
-        <div>Pages: {{ role.pages.join(', ') }}</div>
+        <div>
+          <strong>{{ role.code }}</strong> — {{ role.nameEn }}
+          <div>Permissions: {{ role.permissions.join(', ') }}</div>
+          <div>Pages: {{ role.pages.join(', ') }}</div>
+        </div>
+        @if (auth.hasPermission('Role.Manage')) {
+          <div class="actions">
+            <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(role)" />
+            <app-icon-button icon="delete" tone="danger" label="Delete" (pressed)="remove(role)" />
+          </div>
+        }
       </li>
     }
   </ul>

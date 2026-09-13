@@ -20,10 +20,12 @@ export class BrandsPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
   readonly items = signal<NamedDto[]>([]);
+  readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly form = this.fb.group({
     nameEn: ['', Validators.required],
-    nameAr: ['', Validators.required]
+    nameAr: ['', Validators.required],
+    isActive: [true]
   });
 
   ngOnInit(): void { this.reload(); }
@@ -35,11 +37,34 @@ export class BrandsPage implements OnInit {
     });
   }
 
+  startEdit(item: NamedDto): void {
+    this.editingId.set(item.id);
+    this.form.patchValue({ nameEn: item.nameEn, nameAr: item.nameAr, isActive: item.isActive });
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+    this.form.reset({ isActive: true });
+  }
+
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.http.post(`${environment.apiBaseUrl}/brands`, { ...this.form.getRawValue(), isActive: true }).subscribe({
-      next: () => { this.form.reset(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Create failed')
+    const body = { ...this.form.getRawValue(), isActive: !!this.form.value.isActive };
+    const id = this.editingId();
+    const req$ = id
+      ? this.http.put(`${environment.apiBaseUrl}/brands/${id}`, body)
+      : this.http.post(`${environment.apiBaseUrl}/brands`, body);
+    req$.subscribe({
+      next: () => { this.cancelEdit(); this.reload(); },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Save failed')
+    });
+  }
+
+  remove(item: NamedDto): void {
+    if (!confirm(`Delete ${item.nameEn}?`)) return;
+    this.http.delete(`${environment.apiBaseUrl}/brands/${item.id}`).subscribe({
+      next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
+      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
     });
   }
 }

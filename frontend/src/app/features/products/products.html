@@ -8,39 +8,41 @@
     <p class="error">{{ error() }}</p>
   }
 
-  <div class="catalog">
-    <label class="catalog-label" for="drug-search">{{ t('PRODUCTS.SEARCH_DRUGS') }}</label>
-    <div class="catalog-search">
-      <input
-        id="drug-search"
-        type="search"
-        [value]="catalogSearch.value"
-        (input)="onCatalogInput($any($event.target).value)"
-        (focus)="catalogResults().length && catalogOpen.set(true)"
-        [placeholder]="t('PRODUCTS.SEARCH_PLACEHOLDER')"
-        autocomplete="off"
-      />
-      @if (catalogLoading()) {
-        <span class="catalog-status">{{ t('COMMON.LOADING') }}</span>
+  @if (!editingId()) {
+    <div class="catalog">
+      <label class="catalog-label" for="drug-search">{{ t('PRODUCTS.SEARCH_DRUGS') }}</label>
+      <div class="catalog-search">
+        <input
+          id="drug-search"
+          type="search"
+          [value]="catalogSearch.value"
+          (input)="onCatalogInput($any($event.target).value)"
+          (focus)="catalogResults().length && catalogOpen.set(true)"
+          [placeholder]="t('PRODUCTS.SEARCH_PLACEHOLDER')"
+          autocomplete="off"
+        />
+        @if (catalogLoading()) {
+          <span class="catalog-status">{{ t('COMMON.LOADING') }}</span>
+        }
+      </div>
+
+      @if (catalogOpen() && catalogResults().length) {
+        <ul class="catalog-results" role="listbox">
+          @for (drug of catalogResults(); track $index) {
+            <li>
+              <button type="button" (click)="selectDrug(drug)">
+                <strong>{{ drug.commercialNameEn }}</strong>
+                <span>{{ drug.commercialNameAr }}</span>
+                <small>{{ drug.scientificName }} · {{ drug.manufacturer }} · {{ drug.priceEgp | number: '1.2-2' }} EGP</small>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (catalogOpen() && !catalogLoading() && catalogSearch.value.trim()) {
+        <p class="catalog-empty">{{ t('PRODUCTS.NO_MATCHES') }}</p>
       }
     </div>
-
-    @if (catalogOpen() && catalogResults().length) {
-      <ul class="catalog-results" role="listbox">
-        @for (drug of catalogResults(); track $index) {
-          <li>
-            <button type="button" (click)="selectDrug(drug)">
-              <strong>{{ drug.commercialNameEn }}</strong>
-              <span>{{ drug.commercialNameAr }}</span>
-              <small>{{ drug.scientificName }} · {{ drug.manufacturer }} · {{ drug.priceEgp | number: '1.2-2' }} EGP</small>
-            </button>
-          </li>
-        }
-      </ul>
-    } @else if (catalogOpen() && !catalogLoading() && catalogSearch.value.trim()) {
-      <p class="catalog-empty">{{ t('PRODUCTS.NO_MATCHES') }}</p>
-    }
-  </div>
+  }
 
   @if (selectedDrug(); as drug) {
     <aside class="selected-card">
@@ -49,19 +51,39 @@
         <p>{{ drug.scientificName }}</p>
         <p>{{ drug.manufacturer }} · {{ drug.drugClass }} · {{ drug.route }}</p>
       </div>
-      <app-icon-button icon="close" [label]="t('COMMON.CANCEL')" (pressed)="clearSelection()" />
+      <app-icon-button icon="close" [label]="t('COMMON.CANCEL')" (pressed)="clearForm()" />
     </aside>
   }
 
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <p class="edit-hint">{{ t('PRODUCTS.EDIT_BEFORE_SAVE') }}</p>
-    <input formControlName="code" [placeholder]="t('PRODUCTS.CODE')" />
-    <input formControlName="nameEn" [placeholder]="t('PRODUCTS.NAME_EN')" />
-    <input formControlName="nameAr" [placeholder]="t('PRODUCTS.NAME_AR')" />
-    <input formControlName="barcode" [placeholder]="t('PRODUCTS.BARCODE')" />
-    <input formControlName="sellingPrice" type="number" step="0.01" [placeholder]="t('PRODUCTS.PRICE')" />
-    <app-icon-button icon="save" type="submit" tone="primary" [label]="t('COMMON.SAVE')" />
-  </form>
+  @if (auth.hasPermission(editingId() ? 'Product.Edit' : 'Product.Create')) {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <p class="edit-hint">
+        {{ editingId() ? t('PRODUCTS.EDITING') : t('PRODUCTS.EDIT_BEFORE_SAVE') }}
+      </p>
+      <input formControlName="code" [placeholder]="t('PRODUCTS.CODE')" />
+      <input formControlName="nameEn" [placeholder]="t('PRODUCTS.NAME_EN')" />
+      <input formControlName="nameAr" [placeholder]="t('PRODUCTS.NAME_AR')" />
+      <input formControlName="barcode" [placeholder]="t('PRODUCTS.BARCODE')" />
+      <input formControlName="sellingPrice" type="number" step="0.01" [placeholder]="t('PRODUCTS.PRICE')" />
+      @if (editingId()) {
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="isActive" />
+          {{ t('PRODUCTS.ACTIVE') }}
+        </label>
+      }
+      <div class="form-actions">
+        <app-icon-button
+          icon="save"
+          type="submit"
+          tone="primary"
+          [label]="editingId() ? t('PRODUCTS.UPDATE') : t('COMMON.SAVE')"
+        />
+        @if (editingId()) {
+          <app-icon-button icon="close" [label]="t('COMMON.CANCEL')" (pressed)="cancelEdit()" />
+        }
+      </div>
+    </form>
+  }
 
   @if (loading()) {
     <p>{{ t('COMMON.LOADING') }}</p>
@@ -69,9 +91,20 @@
     <ul class="product-list">
       @for (product of products(); track product.id) {
         <li>
-          <strong>{{ product.code }}</strong>
-          — {{ product.nameEn }} / {{ product.nameAr }}
-          <span>{{ product.sellingPrice | number: '1.2-2' }}</span>
+          <div class="product-meta">
+            <strong>{{ product.code }}</strong>
+            <span>— {{ product.nameEn }} / {{ product.nameAr }}</span>
+            <em>{{ product.isActive ? t('PRODUCTS.ACTIVE') : t('PRODUCTS.INACTIVE') }}</em>
+          </div>
+          <div class="actions">
+            <span class="price">{{ product.sellingPrice | number: '1.2-2' }}</span>
+            @if (auth.hasPermission('Product.Edit')) {
+              <app-icon-button icon="edit" [label]="t('PRODUCTS.EDIT')" (pressed)="startEdit(product)" />
+            }
+            @if (auth.hasPermission('Product.Delete')) {
+              <app-icon-button icon="delete" tone="danger" [label]="t('PRODUCTS.DELETE')" (pressed)="remove(product)" />
+            }
+          </div>
         </li>
       }
     </ul>

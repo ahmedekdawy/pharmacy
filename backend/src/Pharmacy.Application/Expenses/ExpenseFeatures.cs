@@ -99,3 +99,60 @@ public sealed class CreateExpenseCommandHandler(IPharmacyDbContext db, ICurrentT
         return expense.Id;
     }
 }
+
+public sealed record UpdateExpenseCommand(
+    Guid Id,
+    Guid LocationId,
+    string Category,
+    string DescriptionEn,
+    string DescriptionAr,
+    decimal Amount) : IRequest;
+
+public sealed record DeleteExpenseCommand(Guid Id) : IRequest;
+
+public sealed class UpdateExpenseCommandValidator : AbstractValidator<UpdateExpenseCommand>
+{
+    public UpdateExpenseCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.LocationId).NotEmpty();
+        RuleFor(x => x.Category).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.DescriptionEn).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.DescriptionAr).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.Amount).GreaterThan(0);
+    }
+}
+
+public sealed class UpdateExpenseCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<UpdateExpenseCommand>
+{
+    public async Task Handle(UpdateExpenseCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var entity = await db.Expenses.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Expense not found.");
+
+        if (!await db.Locations.AnyAsync(x => x.Id == request.LocationId && x.IsActive, cancellationToken))
+            throw new InvalidOperationException("Location not found.");
+
+        entity.LocationId = request.LocationId;
+        entity.Category = request.Category.Trim();
+        entity.DescriptionEn = request.DescriptionEn.Trim();
+        entity.DescriptionAr = request.DescriptionAr.Trim();
+        entity.Amount = request.Amount;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class DeleteExpenseCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
+    : IRequestHandler<DeleteExpenseCommand>
+{
+    public async Task Handle(DeleteExpenseCommand request, CancellationToken cancellationToken)
+    {
+        if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
+        var entity = await db.Expenses.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new InvalidOperationException("Expense not found.");
+        db.Expenses.Remove(entity);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
