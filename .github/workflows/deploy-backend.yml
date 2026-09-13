@@ -1,0 +1,105 @@
+name: Deploy Backend (FTP / runasp.net)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Pharmacy.sln
+
+      - name: Build
+        run: dotnet build Pharmacy.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Pharmacy.sln -c Release --no-build --verbosity normal
+
+      - name: Publish API for IIS
+        run: |
+          dotnet publish src/Pharmacy.Api/Pharmacy.Api.csproj \
+            -c Release \
+            -o "$GITHUB_WORKSPACE/artifacts/backend" \
+            --no-build
+
+      - name: Ensure logs folder for IIS stdout
+        run: mkdir -p "$GITHUB_WORKSPACE/artifacts/backend/logs"
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pharmacy-api
+          path: artifacts/backend
+          if-no-files-found: error
+
+  deploy-ftp:
+    name: FTP Deploy (runasp.net)
+    needs: build-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production-backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pharmacy-api
+          path: deploy
+
+      - name: Write production settings overlay
+        env:
+          DB: ${{ secrets.DATABASE_CONNECTION_STRING }}
+          JWT: ${{ secrets.JWT_KEY }}
+        run: python3 .github/scripts/write-backend-production-settings.py
+
+      - name: Deploy via FTP to runasp.net
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: ./deploy/
+          server-dir: ${{ vars.FTP_SERVER_DIR || './' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/logs/**

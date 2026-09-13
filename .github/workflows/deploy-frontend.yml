@@ -1,0 +1,102 @@
+name: Deploy Frontend (FTP / runasp.net)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Inject production API URL
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          if [ -n "$API_BASE_URL" ]; then
+            node -e "
+              const fs = require('fs');
+              const path = 'src/environments/environment.production.ts';
+              const url = process.env.API_BASE_URL.replace(/'/g, \"\\\\'\");
+              let text = fs.readFileSync(path, 'utf8');
+              text = text.replace(/apiBaseUrl:\\s*'[^']*'/, \"apiBaseUrl: '\" + url + \"'\");
+              fs.writeFileSync(path, text);
+              console.log('Set apiBaseUrl to', url);
+            "
+          else
+            echo "API_BASE_URL secret not set; keeping default '/api/v1'."
+          fi
+
+      - name: Build
+        run: npm run build -- --configuration production
+
+      - name: Upload static artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pharmacy-web
+          path: frontend/dist/frontend/browser
+          if-no-files-found: error
+
+  deploy-ftp:
+    name: FTP Deploy (runasp.net)
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production-frontend
+
+    steps:
+      - name: Download static artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pharmacy-web
+          path: deploy
+
+      - name: Deploy via FTP to runasp.net
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: ./deploy/
+          server-dir: ${{ vars.FTP_SERVER_DIR || './' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**

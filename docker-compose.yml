@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pharmacy
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pharmacy_pg:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pharmacy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-ahmedekdawy}/pharmacy-api:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=pharmacy;Username=postgres;Password=${POSTGRES_PASSWORD:-changeme}
+      Jwt__Key: ${JWT_KEY:-PharmacyDevSigningKey_ChangeMe_AtLeast32Chars!}
+    ports:
+      - "8080:8080"
+    networks:
+      default:
+        aliases:
+          - pharmacy-api
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-ahmedekdawy}/pharmacy-web:latest
+    depends_on:
+      - backend
+    environment:
+      API_UPSTREAM: http://backend:8080
+    ports:
+      - "80:80"
+
+volumes:
+  pharmacy_pg:

@@ -73,6 +73,58 @@ Users can be activated/deactivated via:
 - `POST /api/v1/users/{id}/activate`
 - `POST /api/v1/users/{id}/deactivate`
 
+## Deploy pipelines (FTP → runasp.net)
+
+Two independent GitHub Actions workflows:
+
+| Workflow | File | Deploys |
+|---|---|---|
+| Backend | `.github/workflows/deploy-backend.yml` | Published ASP.NET Core API via FTP |
+| Frontend | `.github/workflows/deploy-frontend.yml` | Angular static site via FTP |
+
+Triggers: push to `master` (path-filtered), pull request (build only), or manual `workflow_dispatch`.
+
+### GitHub Environments & secrets
+
+Create environments:
+
+- `production-backend`
+- `production-frontend`
+
+**Shared FTP secrets** (set on each environment, or repo secrets):
+
+| Secret | Example |
+|---|---|
+| `FTP_SERVER` | `ftp.runasp.net` (or host from control panel) |
+| `FTP_USERNAME` | your FTP user |
+| `FTP_PASSWORD` | your FTP password |
+
+**Optional variable**
+
+| Variable | Example |
+|---|---|
+| `FTP_SERVER_DIR` | `./` or `/site1/` (folder on FTP for that app) |
+
+**Backend-only secrets** (`production-backend`)
+
+| Secret | Purpose |
+|---|---|
+| `DATABASE_CONNECTION_STRING` | Written into `appsettings.Production.json` before upload |
+| `JWT_KEY` | Production JWT signing key |
+
+**Frontend-only secrets** (`production-frontend`)
+
+| Secret | Purpose |
+|---|---|
+| `API_BASE_URL` | e.g. `https://api.yourdomain.com/api/v1` (injected at build time) |
+
+### runasp.net tips
+
+1. Point each site/app to its own FTP folder (`FTP_SERVER_DIR`).
+2. Backend: enable ASP.NET Core / install hosting bundle support in the panel; upload goes to the site root (often `wwwroot` / site folder).
+3. Frontend: `web.config` is included for Angular route rewrite on IIS.
+4. If API and UI are on different hosts, set `API_BASE_URL` for the frontend pipeline.
+
 ## Foundation progress (§60)
 
 Done: Users/Permissions, Products, Categories, Brands, Locations, Inventory, Suppliers, Purchases (receive), Customers, Sales/POS, Sale returns, Cash shifts, Expenses, Sales reports, Tenant settings, Audit log table, app shell nav.
