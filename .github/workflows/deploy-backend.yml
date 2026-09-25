@@ -113,7 +113,7 @@ jobs:
           protocol: ftp
           local-dir: ./deploy/
           # Same FTP host as frontend; API lives in /api subfolder
-          server-dir: ${{ vars.FTP_API_DIR || './api/' }}
+          server-dir: ${{ vars.FTP_API_DIR || './wwwroot/api/' }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
