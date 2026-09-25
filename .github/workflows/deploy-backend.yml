@@ -74,6 +74,21 @@ jobs:
     environment: production-backend
 
     steps:
+      - name: Validate deploy secrets
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          missing=0
+          for var in FTP_SERVER FTP_USERNAME FTP_PASSWORD; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Secret '${var}' is not set. Add it in Settings → Secrets and variables → Actions, or under the 'production-backend' environment."
+              missing=1
+            fi
+          done
+          exit $missing
+
       - name: Checkout
         uses: actions/checkout@v7
 
