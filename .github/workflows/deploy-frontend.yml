@@ -111,7 +111,7 @@ jobs:
           protocol: ftp
           local-dir: ./deploy/
           # Same FTP host as API; Angular at site root
-          server-dir: ${{ vars.FTP_SERVER_DIR || './' }}
+          server-dir: ${{ vars.FTP_SERVER_DIR || './wwwroot' }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
