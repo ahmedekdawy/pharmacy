@@ -60,7 +60,7 @@ jobs:
               console.log('Set apiBaseUrl to', url);
             "
           else
-            echo "API_BASE_URL secret not set; keeping default '/api/v1'."
+            echo "API_BASE_URL secret not set; keeping default 'https://pharmacyegapi.runasp.net/api/v1'."
           fi
 
       - name: Build
