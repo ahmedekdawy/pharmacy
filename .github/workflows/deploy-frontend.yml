@@ -83,12 +83,12 @@ jobs:
     steps:
       - name: Validate deploy secrets
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FRONTEND_FTP_SERVER: ${{ secrets.FRONTEND_FTP_SERVER }}
+          FRONTEND_FTP_USERNAME: ${{ secrets.FRONTEND_FTP_USERNAME }}
+          FRONTEND_FTP_PASSWORD: ${{ secrets.FRONTEND_FTP_PASSWORD }}
         run: |
           missing=0
-          for var in FTP_SERVER FTP_USERNAME FTP_PASSWORD; do
+          for var in FRONTEND_FTP_SERVER FRONTEND_FTP_USERNAME FRONTEND_FTP_PASSWORD; do
             if [ -z "${!var}" ]; then
               echo "::error::Secret '${var}' is not set. Add it in Settings → Secrets and variables → Actions, or under the 'production-frontend' environment."
               missing=1
@@ -105,16 +105,14 @@ jobs:
       - name: Deploy via FTP to runasp.net (site root)
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: ${{ secrets.FRONTEND_FTP_SERVER }}
+          username: ${{ secrets.FRONTEND_FTP_USERNAME }}
+          password: ${{ secrets.FRONTEND_FTP_PASSWORD }}
           protocol: ftp
           local-dir: ./deploy/
-          # Same FTP host as API; Angular at site root
-          server-dir: ${{ vars.FTP_SERVER_DIR || './wwwroot/' }}
+          # Dedicated frontend FTP site (separate from the API host); Angular at site root
+          server-dir: ${{ vars.FRONTEND_FTP_SERVER_DIR || './wwwroot/' }}
           dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git*/**
-            api/**
-            ./api/**

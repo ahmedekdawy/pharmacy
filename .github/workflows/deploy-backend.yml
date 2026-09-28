@@ -112,7 +112,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           local-dir: ./deploy/
-          # Same FTP host as frontend; API lives in /api subfolder
+          # Backend-only FTP host (frontend deploys to its own FTP); API lives in /api subfolder
           server-dir: ${{ vars.FTP_API_DIR || './wwwroot/api/' }}
           dangerous-clean-slate: false
           exclude: |

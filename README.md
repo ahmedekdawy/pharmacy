@@ -82,14 +82,14 @@ Frontend and API share **one FTP account**. Layout on the server:
 ./api/             ← ASP.NET Core API
 ```
 
-| Workflow | File | FTP folder |
-|---|---|---|
-| Frontend | `.github/workflows/deploy-frontend.yml` | `./` (site root) |
-| Backend | `.github/workflows/deploy-backend.yml` | `./api/` |
+| Workflow | File | FTP host | FTP folder |
+|---|---|---|---|
+| Frontend | `.github/workflows/deploy-frontend.yml` | frontend site (`FRONTEND_FTP_*`) | `./wwwroot/` (site root) |
+| Backend | `.github/workflows/deploy-backend.yml` | API site (`FTP_*`) | `./wwwroot/api/` |
 
 Triggers: push to `master` (path-filtered), pull request (build only), or manual `workflow_dispatch`.
 
-Frontend sync **excludes** `api/**` so Angular deploys never wipe the API folder. SPA `web.config` already skips rewriting `/api` routes.
+Frontend and backend deploy to **different FTP sites**, so each pipeline only touches its own host.
 
 ### GitHub Environments & secrets
 
@@ -98,33 +98,31 @@ Create environments:
 - `production-backend`
 - `production-frontend`
 
-**Shared FTP secrets** (same values on both environments, or repo secrets):
+**Backend secrets** (`production-backend`) — API FTP site
 
-| Secret | Example |
+| Secret | Purpose |
 |---|---|
-| `FTP_SERVER` | `ftp.runasp.net` (or host from control panel) |
-| `FTP_USERNAME` | your FTP user |
-| `FTP_PASSWORD` | your FTP password |
+| `FTP_SERVER` | API site FTP host (from runasp.net control panel) |
+| `FTP_USERNAME` | API site FTP user |
+| `FTP_PASSWORD` | API site FTP password |
+| `DATABASE_CONNECTION_STRING` | Written into `appsettings.Production.json` before upload |
+| `JWT_KEY` | Production JWT signing key |
+
+**Frontend secrets** (`production-frontend`) — frontend FTP site
+
+| Secret | Purpose |
+|---|---|
+| `FRONTEND_FTP_SERVER` | Frontend site FTP host |
+| `FRONTEND_FTP_USERNAME` | Frontend site FTP user |
+| `FRONTEND_FTP_PASSWORD` | Frontend site FTP password |
+| `API_BASE_URL` | Optional. Defaults to `https://pharmacyegapi.runasp.net/api/v1`. |
 
 **Optional variables**
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `FTP_SERVER_DIR` | `./` | Frontend (site root) folder |
-| `FTP_API_DIR` | `./api/` | API subfolder on the same FTP |
-
-**Backend-only secrets** (`production-backend`)
-
-| Secret | Purpose |
-|---|---|
-| `DATABASE_CONNECTION_STRING` | Written into `appsettings.Production.json` before upload |
-| `JWT_KEY` | Production JWT signing key |
-
-**Frontend-only secrets** (`production-frontend`)
-
-| Secret | Purpose |
-|---|---|
-| `API_BASE_URL` | Optional. Default production build uses `/api/v1` (same host). Set only if the API URL differs. |
+| `FRONTEND_FTP_SERVER_DIR` | `./wwwroot/` | Frontend folder on the frontend FTP |
+| `FTP_API_DIR` | `./wwwroot/api/` | API folder on the backend FTP |
 
 ### runasp.net tips
 
