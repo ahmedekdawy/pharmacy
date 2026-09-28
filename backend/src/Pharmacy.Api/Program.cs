@@ -37,12 +37,15 @@ try
             options.SubstituteApiVersionInUrl = true;
         });
 
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("Frontend", policy =>
-            policy.AllowAnyHeader()
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowAnyOrigin());
+                .AllowCredentials());
     });
 
     var app = builder.Build();
