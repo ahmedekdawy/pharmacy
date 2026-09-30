@@ -21,7 +21,7 @@ try
     builder.Services.AddOpenApi();
     builder.Services.AddHealthChecks()
         .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=pharmacy;Username=postgres;Password=123");
+            ?? "Host=pharmacy-ekdawyhamza-1256.c.aivencloud.com;Port=24137;Database=defaultdb;Username=avnadmin;Password=REDACTED;SSL Mode=Require;Channel Binding=Disable");
 
     builder.Services
         .AddApiVersioning(options =>

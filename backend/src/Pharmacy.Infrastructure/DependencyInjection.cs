@@ -30,7 +30,7 @@ public static class DependencyInjection
         });
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=pharmacy;Username=postgres;Password=123";
+            ?? "Host=pharmacy-ekdawyhamza-1256.c.aivencloud.com;Port=24137;Database=defaultdb;Username=avnadmin;Password=REDACTED;SSL Mode=Require;Channel Binding=Disable";
 
         services.AddDbContext<PharmacyDbContext>(options =>
             options.UseNpgsql(connectionString));
