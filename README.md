@@ -19,7 +19,13 @@ Multi-tenant pharmacy management platform (ASP.NET Core + Angular + PostgreSQL).
 
 ## Backend
 
-1. Update connection string in `backend/src/Pharmacy.Api/appsettings.Development.json`.
+1. Configure your connection string with .NET user-secrets (keeps credentials out of git):
+
+```bash
+cd backend/src/Pharmacy.Api
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;Username=...;Password=..."
+```
 2. Apply migrations:
 
 ```bash
