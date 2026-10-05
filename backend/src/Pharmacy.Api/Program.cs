@@ -20,9 +20,8 @@ try
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
     builder.Services.AddHealthChecks()
-        .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=pharmacy-ekdawyhamza-1256.c.aivencloud.com;Port=24137;Database=defaultdb;Username=avnadmin;Password=REDACTED;SSL Mode=Require;Channel Binding=Disable");
-
+        .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection"));
+          
     builder.Services
         .AddApiVersioning(options =>
         {
@@ -37,12 +36,15 @@ try
             options.SubstituteApiVersionInUrl = true;
         });
 
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("Frontend", policy =>
-            policy.AllowAnyHeader()
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowAnyOrigin());
+                .AllowCredentials());
     });
 
     var app = builder.Build();

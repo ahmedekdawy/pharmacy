@@ -29,9 +29,8 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("PharmacyApp/1.0");
         });
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=pharmacy-ekdawyhamza-1256.c.aivencloud.com;Port=24137;Database=defaultdb;Username=avnadmin;Password=REDACTED;SSL Mode=Require;Channel Binding=Disable";
-
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+          
         services.AddDbContext<PharmacyDbContext>(options =>
             options.UseNpgsql(connectionString));
 
