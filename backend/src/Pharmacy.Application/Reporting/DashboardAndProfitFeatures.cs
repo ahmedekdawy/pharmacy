@@ -43,7 +43,7 @@ public sealed class GetProfitReportQueryHandler(IPharmacyDbContext db, ICurrentT
             join s in db.Sales.AsNoTracking() on si.SaleId equals s.Id
             join b in db.ProductBatches.AsNoTracking() on si.BatchId equals b.Id
             where s.SoldAt >= fromUtc && s.SoldAt <= toUtc
-            select si.Quantity * b.PurchasePrice
+            select si.BaseQuantity * b.PurchasePrice
         ).SumAsync(cancellationToken);
 
         var returnCost = await (
@@ -51,7 +51,7 @@ public sealed class GetProfitReportQueryHandler(IPharmacyDbContext db, ICurrentT
             join r in db.SaleReturns.AsNoTracking() on ri.SaleReturnId equals r.Id
             join b in db.ProductBatches.AsNoTracking() on ri.BatchId equals b.Id
             where r.ReturnedAt >= fromUtc && r.ReturnedAt <= toUtc
-            select ri.Quantity * b.PurchasePrice
+            select ri.BaseQuantity * b.PurchasePrice
         ).SumAsync(cancellationToken);
 
         var netCogs = cogs - returnCost;

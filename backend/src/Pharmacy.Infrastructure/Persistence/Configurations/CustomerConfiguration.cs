@@ -16,6 +16,8 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.NameAr).HasColumnName("name_ar").HasMaxLength(256).IsRequired();
         builder.Property(x => x.NameEn).HasColumnName("name_en").HasMaxLength(256).IsRequired();
         builder.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(64);
+        builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(512);
+        builder.Property(x => x.CreditLimit).HasColumnName("credit_limit").HasPrecision(18, 4);
         builder.Property(x => x.IsActive).HasColumnName("is_active");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");

@@ -6,7 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
-interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string; phone?: string; isActive: boolean; }
+interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string; phone?: string; address?: string | null; creditLimit: number; balance: number; isActive: boolean; }
 
 @Component({
   selector: 'app-customers',
@@ -21,7 +21,9 @@ interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string
         <input formControlName="code" placeholder="Code" />
         <input formControlName="nameEn" placeholder="Name EN" />
         <input formControlName="nameAr" placeholder="Name AR" />
-        <input formControlName="phone" placeholder="Phone" />
+        <input formControlName="phone" placeholder="Phone / الهاتف" />
+        <input formControlName="address" placeholder="Address / العنوان" />
+        <label class="lim">Credit limit / حد الائتمان (0 = بدون حد)<input formControlName="creditLimit" type="number" min="0" step="1" /></label>
         @if (editingId()) {
           <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
         }
@@ -34,7 +36,7 @@ interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string
     <ul>
       @for (item of items(); track item.id) {
         <li>
-          <div><strong>{{ item.code }}</strong> — {{ item.nameEn }} / {{ item.nameAr }}</div>
+          <div><strong>{{ item.code }}</strong> — {{ item.nameEn }} / {{ item.nameAr }} @if (item.balance) { <span class="bal" [class.debt]="item.balance > 0">{{ item.balance.toFixed(2) }}</span> }</div>
           @if (auth.hasPermission('Customer.Manage')) {
             <div class="actions">
               <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(item)" />
@@ -55,6 +57,8 @@ interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string
     ul { list-style:none; padding:0; }
     li { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.75rem 0; border-bottom:1px solid var(--border); }
     .error { color:#c45c4a; }
+    .lim { display:flex; flex-direction:column; font-size:.75rem; color:var(--muted); gap:.2rem; }
+    .bal { margin-inline-start:.5rem; font-size:.85rem; padding:0 .45rem; border-radius:999px; background:var(--surface-muted); } .bal.debt { color:#b5462f; }
   `]
 })
 export class CustomersPage implements OnInit {
@@ -68,7 +72,9 @@ export class CustomersPage implements OnInit {
     code: ['', Validators.required],
     nameEn: ['', Validators.required],
     nameAr: ['', Validators.required],
-    phone: [''],
+    phone: [""],
+    address: [""],
+    creditLimit: [0, [Validators.min(0)]],
     isActive: [true]
   });
 
@@ -85,18 +91,19 @@ export class CustomersPage implements OnInit {
     this.editingId.set(item.id);
     this.form.patchValue({
       code: item.code, nameEn: item.nameEn, nameAr: item.nameAr,
-      phone: item.phone ?? '', isActive: item.isActive
+      phone: item.phone ?? '', isActive: item.isActive,
+      address: item.address ?? '', creditLimit: item.creditLimit ?? 0
     });
   }
 
   cancelEdit(): void {
     this.editingId.set(null);
-    this.form.reset({ isActive: true });
+    this.form.reset({ isActive: true, creditLimit: 0 });
   }
 
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    const body = { ...this.form.getRawValue(), isActive: !!this.form.value.isActive };
+    const body = { ...this.form.getRawValue(), isActive: !!this.form.value.isActive, creditLimit: Number(this.form.value.creditLimit) || 0 };
     const id = this.editingId();
     const req$ = id
       ? this.http.put(`${environment.apiBaseUrl}/customers/${id}`, body)

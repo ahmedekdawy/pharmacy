@@ -64,7 +64,37 @@
       <input formControlName="nameEn" [placeholder]="t('PRODUCTS.NAME_EN')" />
       <input formControlName="nameAr" [placeholder]="t('PRODUCTS.NAME_AR')" />
       <input formControlName="barcode" [placeholder]="t('PRODUCTS.BARCODE')" />
-      <input formControlName="sellingPrice" type="number" step="0.01" [placeholder]="t('PRODUCTS.PRICE')" />
+      <label class="field">
+        <span>{{ i18n.pick('Box price', 'سعر العلبة') }}</span>
+        <input formControlName="sellingPrice" type="number" step="0.01" min="0" />
+      </label>
+      <fieldset class="pack">
+        <legend>{{ i18n.pick('Pack size & retail sale', 'العبوة والبيع القطاعي') }}</legend>
+        <label class="field">
+          <span>{{ i18n.pick('Strips per box', 'شرائط في العلبة') }}</span>
+          <input formControlName="stripsPerBox" type="number" min="1" step="1" />
+        </label>
+        <label class="field">
+          <span>{{ i18n.pick('Pills per strip', 'حبات في الشريط') }}</span>
+          <input formControlName="unitsPerStrip" type="number" min="1" step="1" />
+        </label>
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="allowStripSale" />
+          {{ i18n.pick('Sell by strip', 'بيع بالشريط') }}
+        </label>
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="allowUnitSale" />
+          {{ i18n.pick('Sell by pill', 'بيع بالحبة') }}
+        </label>
+        <label class="field">
+          <span>{{ i18n.pick('Strip price (optional)', 'سعر الشريط (اختياري)') }}</span>
+          <input formControlName="stripPrice" type="number" step="0.01" min="0" [placeholder]="derivedStripPrice()" />
+        </label>
+        <label class="field">
+          <span>{{ i18n.pick('Pill price (optional)', 'سعر الحبة (اختياري)') }}</span>
+          <input formControlName="unitPrice" type="number" step="0.01" min="0" [placeholder]="derivedUnitPrice()" />
+        </label>
+      </fieldset>
       @if (editingId()) {
         <label class="active-toggle">
           <input type="checkbox" formControlName="isActive" />
@@ -97,6 +127,9 @@
             <em>{{ product.isActive ? t('PRODUCTS.ACTIVE') : t('PRODUCTS.INACTIVE') }}</em>
           </div>
           <div class="actions">
+            @if ((product.stripsPerBox ?? 1) * (product.unitsPerStrip ?? 1) > 1) {
+              <span class="pack-tag">{{ product.stripsPerBox }}×{{ product.unitsPerStrip }}</span>
+            }
             <span class="price">{{ product.sellingPrice | number: '1.2-2' }}</span>
             @if (auth.hasPermission('Product.Edit')) {
               <app-icon-button icon="edit" [label]="t('PRODUCTS.EDIT')" (pressed)="startEdit(product)" />

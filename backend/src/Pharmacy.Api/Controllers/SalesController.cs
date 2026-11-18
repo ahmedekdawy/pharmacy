@@ -17,8 +17,13 @@ public sealed class SalesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
     [RequirePermission(PermissionCodes.SaleView)]
-    public async Task<ActionResult<ApiResponse<object>>> Get(CancellationToken cancellationToken)
-        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetSalesQuery(), cancellationToken)));
+    public async Task<ActionResult<ApiResponse<object>>> Get(
+        [FromQuery] DateTimeOffset? from,
+        [FromQuery] DateTimeOffset? to,
+        [FromQuery] Guid? customerId,
+        [FromQuery] int take = 100,
+        CancellationToken cancellationToken = default)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetSalesQuery(from, to, customerId, take), cancellationToken)));
 
     [HttpGet("{id:guid}")]
     [RequirePermission(PermissionCodes.SaleView)]
@@ -28,5 +33,5 @@ public sealed class SalesController(IMediator mediator) : ControllerBase
     [HttpPost]
     [RequirePermission(PermissionCodes.SaleCreate)]
     public async Task<ActionResult<ApiResponse<object>>> Create([FromBody] CreateSaleCommand command, CancellationToken cancellationToken)
-        => Ok(ApiResponse<object>.Ok(new { id = await mediator.Send(command, cancellationToken) }));
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(command with { IsOffline = false }, cancellationToken)));
 }

@@ -39,6 +39,7 @@ public static class PermissionCodes
 
     public const string CustomerView = "Customer.View";
     public const string CustomerManage = "Customer.Manage";
+    public const string CustomerPayment = "Customer.Payment";
 
     public const string SaleView = "Sale.View";
     public const string SaleCreate = "Sale.Create";

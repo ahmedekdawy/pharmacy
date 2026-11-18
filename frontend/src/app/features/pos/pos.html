@@ -1,0 +1,223 @@
+<section class="pos">
+  <!-- ============ catalog / search ============ -->
+  <div class="catalog">
+    <div class="bar">
+      <select [value]="locationId()" (change)="setLocation($any($event.target).value)" [attr.aria-label]="pick('Branch', 'الفرع')">
+        @for (l of sync.locations(); track l.id) {
+          <option [value]="l.id" [selected]="l.id === locationId()">{{ name(l) }}</option>
+        }
+      </select>
+      <span class="net" [class.off]="!sync.online()">
+        {{ sync.online() ? pick('Online', 'متصل') : pick('Offline', 'بدون إنترنت') }}
+        @if (sync.pendingCount()) { · {{ sync.pendingCount() }} {{ pick('pending', 'بانتظار المزامنة') }} }
+      </span>
+    </div>
+
+    <div class="search-row">
+    @if (cameraSupported()) {
+      <button type="button" class="cam" (click)="cameraOpen.set(true)" [attr.aria-label]="pick('Scan with camera', 'مسح بالكاميرا')">📷</button>
+    }
+    <input
+      #searchBox
+      class="search"
+      type="search"
+      inputmode="search"
+      autocomplete="off"
+      autofocus
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      (keydown.enter)="onSearchEnter()"
+      [placeholder]="pick('Search name, code or scan barcode…', 'ابحث بالاسم أو الكود أو امسح الباركود…')"
+    />
+    </div>
+    @if (cameraOpen()) {
+      <app-barcode-scanner (scanned)="onCameraScan($event)" (closed)="cameraOpen.set(false)" />
+    }
+
+    @if (!sync.products().length) {
+      <p class="hint">
+        @if (sync.syncing()) { {{ pick('Loading catalog…', 'جاري تحميل الأصناف…') }} }
+        @else { {{ pick('No products on this device yet. Connect to the internet once to download the catalog.', 'لا توجد أصناف على هذا الجهاز بعد. اتصل بالإنترنت مرة واحدة لتحميل الأصناف.') }} }
+      </p>
+    }
+
+    <ul class="results">
+      @for (p of results(); track p.id) {
+        <li [class.out]="p.stock <= 0">
+          <button type="button" class="result-main" (click)="add(p)">
+            <strong>{{ name(p) }}</strong>
+            <small>{{ p.code }} · {{ stockText(p) }}</small>
+          </button>
+          <div class="unit-buttons">
+            @for (u of units(p); track u) {
+              <button type="button" (click)="add(p, u)">
+                {{ unitName(u) }}<b>{{ priceOf(p, u) | number: '1.2-2' }}</b>
+              </button>
+            }
+          </div>
+        </li>
+      }
+      @if (query() && !results().length) {
+        <li class="hint">{{ pick('No matching products.', 'لا توجد نتائج.') }}</li>
+      }
+    </ul>
+  </div>
+
+  <!-- ============ cart / checkout ============ -->
+  <aside class="cart" [class.open]="cartOpen()">
+    <header class="cart-head">
+      <h2>{{ pick('Invoice', 'الفاتورة') }} <span class="badge">{{ itemCount() }}</span></h2>
+      <button type="button" class="link mobile-only" (click)="cartOpen.set(false)">{{ pick('Back', 'رجوع') }}</button>
+      @if (itemCount()) {
+        <button type="button" class="link danger" (click)="resetSale()">{{ pick('Clear', 'مسح') }}</button>
+      }
+    </header>
+
+    <ul class="lines">
+      @for (l of cart(); track l.key) {
+        <li [class.short]="shortages().has(l.product.id)">
+          <div class="line-top">
+            <strong>{{ name(l.product) }}</strong>
+            <button type="button" class="x" (click)="remove(l)" [attr.aria-label]="pick('Remove', 'حذف')">×</button>
+          </div>
+          <div class="seg">
+            @for (u of units(l.product); track u) {
+              <button type="button" [class.on]="l.unit === u" (click)="setUnit(l, u)">{{ unitName(u) }}</button>
+            }
+          </div>
+          <div class="line-row">
+            <div class="stepper">
+              <button type="button" (click)="setQty(l, l.qty - 1)">−</button>
+              <input type="number" min="0" step="1" inputmode="decimal" [value]="l.qty" (change)="setQty(l, num($any($event.target).value))" />
+              <button type="button" (click)="setQty(l, l.qty + 1)">+</button>
+            </div>
+            <label class="price">
+              <span>{{ pick('Price', 'السعر') }}</span>
+              <input type="number" min="0" step="0.25" inputmode="decimal" [value]="l.price" (change)="setPrice(l, num($any($event.target).value))" />
+            </label>
+            <b class="total">{{ lineTotal(l) | number: '1.2-2' }}</b>
+          </div>
+          @if (shortages().has(l.product.id)) {
+            <small class="warn">{{ pick('Quantity exceeds stock on hand', 'الكمية أكبر من المتاح بالمخزن') }} ({{ stockText(l.product) }})</small>
+          }
+        </li>
+      } @empty {
+        <li class="hint">{{ pick('Search and tap a product to add it.', 'ابحث واضغط على الصنف لإضافته.') }}</li>
+      }
+    </ul>
+
+    <!-- customer -->
+    <div class="block">
+      <label class="lbl">{{ pick('Customer', 'العميل') }}</label>
+      @if (customer(); as c) {
+        <div class="chip">
+          <span>{{ name(c) }} @if (c.phone) { · {{ c.phone }} }</span>
+          <span class="bal" [class.debt]="c.balance > 0">{{ pick('Balance', 'الرصيد') }}: {{ c.balance | number: '1.2-2' }}</span>
+          <button type="button" class="x" (click)="selectCustomer(null)">×</button>
+        </div>
+      } @else {
+        <div class="cust-search">
+          <input
+            type="search"
+            [value]="customerQuery()"
+            (input)="customerQuery.set($any($event.target).value)"
+            [placeholder]="pick('Walk-in · search name or phone', 'عميل نقدي · ابحث بالاسم أو الهاتف')"
+          />
+          @if (auth.hasPermission('Customer.Manage')) {
+            <button type="button" class="link" (click)="showNewCustomer.set(!showNewCustomer())">+ {{ pick('New', 'جديد') }}</button>
+          }
+        </div>
+        @if (customerResults().length) {
+          <ul class="dropdown">
+            @for (c of customerResults(); track c.id) {
+              <li><button type="button" (click)="selectCustomer(c)">{{ name(c) }} <small>{{ c.phone }} · {{ c.balance | number: '1.2-2' }}</small></button></li>
+            }
+          </ul>
+        }
+        @if (showNewCustomer()) {
+          <div class="new-cust">
+            <input [value]="newCustomerName()" (input)="newCustomerName.set($any($event.target).value)" [placeholder]="pick('Name', 'الاسم')" />
+            <input [value]="newCustomerPhone()" (input)="newCustomerPhone.set($any($event.target).value)" inputmode="tel" [placeholder]="pick('Phone', 'الهاتف')" />
+            <button type="button" class="btn" (click)="createCustomer()">{{ pick('Add', 'إضافة') }}</button>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- totals & payment -->
+    <div class="block totals">
+      <div class="row"><span>{{ pick('Subtotal', 'الإجمالي') }}</span><b>{{ subTotal() | number: '1.2-2' }}</b></div>
+      <div class="row">
+        <span>{{ pick('Discount', 'خصم') }}</span>
+        <input type="number" min="0" step="0.5" inputmode="decimal" [value]="discount() || ''" (input)="discount.set(num($any($event.target).value))" placeholder="0" />
+      </div>
+      <div class="row grand"><span>{{ pick('Net', 'الصافي') }}</span><b>{{ total() | number: '1.2-2' }}</b></div>
+
+      <div class="seg pay">
+        <button type="button" [class.on]="paymentMethod() === 'Cash'" (click)="paymentMethod.set('Cash')">{{ pick('Cash', 'نقدي') }}</button>
+        <button type="button" [class.on]="paymentMethod() === 'Card'" (click)="paymentMethod.set('Card')">{{ pick('Card', 'فيزا') }}</button>
+        <button type="button" [class.on]="paymentMethod() === 'Wallet'" (click)="paymentMethod.set('Wallet')">{{ pick('Wallet', 'محفظة') }}</button>
+        <button type="button" [class.on]="paidInput() === 0" (click)="setCredit()">{{ pick('On account', 'آجل') }}</button>
+      </div>
+
+      <div class="row">
+        <span>{{ pick('Paid', 'المدفوع') }}</span>
+        <input
+          type="number"
+          min="0"
+          step="0.5"
+          inputmode="decimal"
+          [value]="paidInput() ?? ''"
+          (input)="paidInput.set($any($event.target).value === '' ? null : num($any($event.target).value))"
+          [placeholder]="(total() | number: '1.2-2') ?? ''"
+        />
+      </div>
+      @if (due() > 0) {
+        <div class="row due"><span>{{ pick('Remaining on account', 'المتبقي (آجل)') }}</span><b>{{ due() | number: '1.2-2' }}</b></div>
+      }
+      @if (change() > 0) {
+        <div class="row"><span>{{ pick('Change', 'الباقي للعميل') }}</span><b>{{ change() | number: '1.2-2' }}</b></div>
+      }
+      @if (creditWarning()) { <p class="warn">{{ creditWarning() }}</p> }
+    </div>
+
+    <input class="notes" [value]="notes()" (input)="notes.set($any($event.target).value)" [placeholder]="pick('Notes (optional)', 'ملاحظات (اختياري)')" />
+
+    @if (error()) { <p class="error">{{ error() }}</p> }
+
+    @if (auth.hasPermission('Sale.Create')) {
+      <button type="button" class="checkout" [disabled]="!itemCount() || busy()" (click)="checkout()">
+        {{ busy() ? pick('Saving…', 'جاري الحفظ…') : pick('Complete sale', 'إتمام البيع') }} · {{ total() | number: '1.2-2' }}
+      </button>
+    }
+  </aside>
+
+  <!-- mobile sticky summary -->
+  @if (!cartOpen()) {
+    <button type="button" class="mobile-summary" (click)="cartOpen.set(true)">
+      <span>{{ pick('Invoice', 'الفاتورة') }} ({{ itemCount() }})</span>
+      <b>{{ total() | number: '1.2-2' }}</b>
+    </button>
+  }
+
+  <!-- receipt dialog -->
+  @if (receipt(); as r) {
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="sheet">
+        <h2>{{ pick('Sale completed', 'تم البيع') }} ✓</h2>
+        <p>
+          <b>{{ r.number }}</b> · {{ r.total | number: '1.2-2' }}
+          @if (r.due > 0) { · {{ pick('on account', 'آجل') }} {{ r.due | number: '1.2-2' }} }
+        </p>
+        @if (r.offline) {
+          <p class="warn">{{ pick('Saved on this device. It will be uploaded automatically when the internet is back.', 'تم الحفظ على الجهاز وسيتم رفعها تلقائياً عند عودة الإنترنت.') }}</p>
+        }
+        @for (w of r.warnings ?? []; track $index) { <p class="warn">{{ w }}</p> }
+        <div class="actions">
+          <button type="button" class="btn" (click)="print(r)">{{ pick('Print receipt', 'طباعة الإيصال') }}</button>
+          <button type="button" class="btn primary" (click)="closeReceipt()">{{ pick('New sale', 'فاتورة جديدة') }}</button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

@@ -21,6 +21,13 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.BrandId).HasColumnName("brand_id");
         builder.Property(x => x.SellingPrice).HasColumnName("selling_price").HasPrecision(18, 4);
         builder.Property(x => x.IsActive).HasColumnName("is_active");
+        builder.Property(x => x.StripsPerBox).HasColumnName("strips_per_box").HasDefaultValue(1);
+        builder.Property(x => x.UnitsPerStrip).HasColumnName("units_per_strip").HasDefaultValue(1);
+        builder.Property(x => x.AllowStripSale).HasColumnName("allow_strip_sale");
+        builder.Property(x => x.AllowUnitSale).HasColumnName("allow_unit_sale");
+        builder.Property(x => x.StripPrice).HasColumnName("strip_price").HasPrecision(18, 4);
+        builder.Property(x => x.UnitPrice).HasColumnName("unit_price").HasPrecision(18, 4);
+        builder.Ignore(x => x.UnitsPerBox);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");

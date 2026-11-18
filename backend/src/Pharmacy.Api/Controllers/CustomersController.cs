@@ -17,8 +17,20 @@ public sealed class CustomersController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
     [RequirePermission(PermissionCodes.CustomerView)]
-    public async Task<ActionResult<ApiResponse<object>>> Get(CancellationToken cancellationToken)
-        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetCustomersQuery(), cancellationToken)));
+    public async Task<ActionResult<ApiResponse<object>>> Get([FromQuery] bool onlyDebtors, CancellationToken cancellationToken)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetCustomersQuery(onlyDebtors), cancellationToken)));
+
+    [HttpGet("{id:guid}/statement")]
+    [RequirePermission(PermissionCodes.CustomerView)]
+    public async Task<ActionResult<ApiResponse<object>>> Statement(Guid id, CancellationToken cancellationToken)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetCustomerStatementQuery(id), cancellationToken)));
+
+    [HttpPost("{id:guid}/payments")]
+    [RequirePermission(PermissionCodes.CustomerPayment)]
+    public async Task<ActionResult<ApiResponse<object>>> Pay(Guid id, [FromBody] CustomerPaymentRequest body, CancellationToken cancellationToken)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(
+            new CreateCustomerPaymentCommand(id, body.Amount, body.PaymentMethod, body.LocationId, body.Notes, body.Id),
+            cancellationToken)));
 
     [HttpPost]
     [RequirePermission(PermissionCodes.CustomerManage)]
@@ -29,7 +41,7 @@ public sealed class CustomersController(IMediator mediator) : ControllerBase
     [RequirePermission(PermissionCodes.CustomerManage)]
     public async Task<ActionResult<ApiResponse<object>>> Update(Guid id, [FromBody] CustomerUpdateRequest body, CancellationToken cancellationToken)
     {
-        await mediator.Send(new UpdateCustomerCommand(id, body.Code, body.NameEn, body.NameAr, body.Phone, body.IsActive), cancellationToken);
+        await mediator.Send(new UpdateCustomerCommand(id, body.Code, body.NameEn, body.NameAr, body.Phone, body.IsActive, body.Address, body.CreditLimit), cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { id }));
     }
 
@@ -42,4 +54,18 @@ public sealed class CustomersController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record CustomerUpdateRequest(string Code, string NameEn, string NameAr, string? Phone, bool IsActive = true);
+public sealed record CustomerUpdateRequest(
+    string Code,
+    string NameEn,
+    string NameAr,
+    string? Phone,
+    bool IsActive = true,
+    string? Address = null,
+    decimal CreditLimit = 0);
+
+public sealed record CustomerPaymentRequest(
+    decimal Amount,
+    string? PaymentMethod,
+    Guid? LocationId,
+    string? Notes,
+    Guid? Id);

@@ -47,7 +47,13 @@ public sealed class SearchProductsQueryHandler(
                 x.CategoryId,
                 x.BrandId,
                 x.SellingPrice,
-                x.IsActive))
+                x.IsActive,
+                x.StripsPerBox,
+                x.UnitsPerStrip,
+                x.AllowStripSale,
+                x.AllowUnitSale,
+                x.StripPrice,
+                x.UnitPrice))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ProductDto>

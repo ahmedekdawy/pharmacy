@@ -17,6 +17,8 @@ public sealed class SaleReturnConfiguration : IEntityTypeConfiguration<SaleRetur
         builder.Property(x => x.LocationId).HasColumnName("location_id").IsRequired();
         builder.Property(x => x.ReturnedAt).HasColumnName("returned_at");
         builder.Property(x => x.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 4);
+        builder.Property(x => x.CreditAmount).HasColumnName("credit_amount").HasPrecision(18, 4);
+        builder.Property(x => x.RefundAmount).HasColumnName("refund_amount").HasPrecision(18, 4);
         builder.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(512);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");

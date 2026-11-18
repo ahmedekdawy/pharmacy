@@ -117,13 +117,21 @@ public sealed class CloseCashShiftCommandHandler(
         if (shift.Status != "Open")
             throw new InvalidOperationException("Cash shift is already closed.");
 
+        // Only cash actually collected goes into the drawer: credit (آجل) and card/wallet payments are excluded.
         var salesTotal = await db.Sales
-            .Where(x => x.LocationId == shift.LocationId && x.SoldAt >= shift.OpenedAt)
-            .SumAsync(x => (decimal?)x.TotalAmount, cancellationToken) ?? 0;
+            .Where(x => x.LocationId == shift.LocationId && x.SoldAt >= shift.OpenedAt &&
+                        x.PaymentMethod == Pharmacy.Domain.Common.PaymentMethods.Cash)
+            .SumAsync(x => (decimal?)x.PaidAmount, cancellationToken) ?? 0;
+
+        var debtCollected = await db.CustomerPayments
+            .Where(x => x.LocationId == shift.LocationId && x.PaidAt >= shift.OpenedAt &&
+                        x.PaymentMethod == Pharmacy.Domain.Common.PaymentMethods.Cash)
+            .SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0;
+        salesTotal += debtCollected;
 
         var returnsTotal = await db.SaleReturns
             .Where(x => x.LocationId == shift.LocationId && x.ReturnedAt >= shift.OpenedAt)
-            .SumAsync(x => (decimal?)x.TotalAmount, cancellationToken) ?? 0;
+            .SumAsync(x => (decimal?)x.RefundAmount, cancellationToken) ?? 0;
 
         var expensesTotal = await db.Expenses
             .Where(x => x.LocationId == shift.LocationId && x.SpentAt >= shift.OpenedAt &&

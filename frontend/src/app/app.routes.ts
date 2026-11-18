@@ -71,6 +71,30 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sales/sales').then((m) => m.SalesPage)
       },
       {
+        path: 'pos',
+        canActivate: [permissionGuard('Sale.Create')],
+        loadComponent: () => import('./features/pos/pos').then((m) => m.PosPage)
+      },
+      {
+        path: 'opening-stock',
+        canActivate: [permissionGuard('Inventory.Adjust')],
+        loadComponent: () => import('./features/opening-stock/opening-stock').then((m) => m.OpeningStockPage)
+      },
+      {
+        path: 'debts',
+        canActivate: [permissionGuard('Customer.View')],
+        loadComponent: () => import('./features/debts/debts').then((m) => m.DebtsPage)
+      },
+      {
+        path: 'daily-report',
+        canActivate: [permissionGuard('Report.Sales')],
+        loadComponent: () => import('./features/daily-report/daily-report').then((m) => m.DailyReportPage)
+      },
+      {
+        path: 'sync',
+        loadComponent: () => import('./features/sync/sync-panel').then((m) => m.SyncPanelPage)
+      },
+      {
         path: 'returns',
         canActivate: [permissionGuard('Sale.View')],
         loadComponent: () => import('./features/returns/returns').then((m) => m.ReturnsPage)
