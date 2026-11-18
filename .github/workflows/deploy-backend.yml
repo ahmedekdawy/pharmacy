@@ -104,6 +104,26 @@ jobs:
           JWT: ${{ secrets.JWT_KEY }}
         run: python3 .github/scripts/write-backend-production-settings.py
 
+      - name: Take site offline (app_offline.htm)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ vars.FTP_API_DIR || './wwwroot/' }}
+        run: |
+          cat > app_offline.htm <<'EOF'
+          <!DOCTYPE html>
+          <html><head><meta charset="utf-8"><title>Maintenance</title></head>
+          <body><h1>Updating&hellip;</h1><p>The service is being updated and will be back in a moment.</p></body></html>
+          <!-- padding so browsers (IE/Edge) show this page instead of a friendly 503 message
+          ................................................................................
+          ................................................................................
+          ................................................................................
+          ................................................................................
+          -->
+          EOF
+          python3 .github/scripts/ftp-offline.py upload app_offline.htm
+
       - name: Deploy via FTP to runasp.net (/api)
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
@@ -119,3 +139,14 @@ jobs:
             **/.git*
             **/.git*/**
             **/logs/**
+            **/app_offline.htm
+
+      # Always runs (even if the upload failed) so the site never stays offline.
+      - name: Bring site back online (remove app_offline.htm)
+        if: always()
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ vars.FTP_API_DIR || './wwwroot/' }}
+        run: python3 .github/scripts/ftp-offline.py remove
