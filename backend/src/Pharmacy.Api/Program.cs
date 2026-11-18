@@ -61,8 +61,8 @@ try
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging();
 
-    if (app.Environment.IsDevelopment())
-    {
+   // if (app.Environment.IsDevelopment())
+   // {
         app.MapOpenApi();
         app.UseSwaggerUI(options =>
         {
@@ -70,7 +70,7 @@ try
             options.SwaggerEndpoint("../openapi/v1.json", "Pharmacy API v1");
             options.RoutePrefix = "swagger";
         });
-    }
+   // }
 
     app.UseHttpsRedirection();
     app.UseCors("Frontend");
