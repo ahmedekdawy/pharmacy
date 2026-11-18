@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar">
 <head>
   <meta charset="utf-8">
   <title>Pharmacy</title>
@@ -16,7 +16,7 @@
     (function () {
       try {
         var theme = localStorage.getItem('pharmacy.theme') === 'dark' ? 'dark' : 'light';
-        var lang = localStorage.getItem('pharmacy.language') === 'ar' ? 'ar' : 'en';
+        var lang = localStorage.getItem('pharmacy.language') === 'en' ? 'en' : 'ar';
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.lang = lang;
         document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';

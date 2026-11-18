@@ -51,6 +51,7 @@ public sealed class UsersController(IMediator mediator) : ControllerBase
         await mediator.Send(new UpdateUserCommand(
             id,
             body.Email,
+            body.PhoneNumber,
             body.FullNameEn,
             body.FullNameAr,
             body.Password,
@@ -86,6 +87,7 @@ public sealed class UsersController(IMediator mediator) : ControllerBase
 
 public sealed record UpdateUserRequest(
     string Email,
+    string? PhoneNumber,
     string FullNameEn,
     string FullNameAr,
     string? Password,

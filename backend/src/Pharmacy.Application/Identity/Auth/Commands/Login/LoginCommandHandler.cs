@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pharmacy.Application.Common;
 using Pharmacy.Application.Common.Interfaces;
+using Pharmacy.Domain.Identity;
 
 namespace Pharmacy.Application.Identity.Auth.Commands.Login;
 
@@ -13,7 +15,7 @@ public sealed class LoginCommandHandler(
     public async Task<LoginResult> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var tenantCode = request.TenantCode.Trim().ToUpperInvariant();
-        var email = request.Email.Trim().ToLowerInvariant();
+        var identifier = request.EmailOrMobile.Trim();
 
         var tenant = await db.Tenants
             .IgnoreQueryFilters()
@@ -27,12 +29,34 @@ public sealed class LoginCommandHandler(
 
         currentTenant.SetTenant(tenant.Id);
 
-        var user = await db.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                x => !x.IsDeleted && x.TenantId == tenant.Id && x.Email.ToLower() == email,
-                cancellationToken)
-            ?? throw new UnauthorizedAccessException("Invalid tenant or credentials.");
+        var isEmail = identifier.Contains('@');
+
+        User? user;
+        if (isEmail)
+        {
+            var email = identifier.ToLowerInvariant();
+            user = await db.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    x => !x.IsDeleted && x.TenantId == tenant.Id && x.Email.ToLower() == email,
+                    cancellationToken);
+        }
+        else
+        {
+            var phoneNumber = PhoneNumbers.Normalize(identifier);
+            user = phoneNumber is null
+                ? null
+                : await db.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(
+                        x => !x.IsDeleted && x.TenantId == tenant.Id && x.PhoneNumber == phoneNumber,
+                        cancellationToken);
+        }
+
+        if (user is null)
+        {
+            throw new UnauthorizedAccessException("Invalid tenant or credentials.");
+        }
 
         if (!user.IsActive)
         {

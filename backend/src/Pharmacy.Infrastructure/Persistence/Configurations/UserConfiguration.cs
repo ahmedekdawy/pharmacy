@@ -14,6 +14,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.TenantId).HasColumnName("tenant_id").IsRequired();
         builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(256).IsRequired();
+        builder.Property(x => x.PhoneNumber).HasColumnName("phone_number").HasMaxLength(32);
         builder.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(512).IsRequired();
         builder.Property(x => x.FullNameAr).HasColumnName("full_name_ar").HasMaxLength(256).IsRequired();
         builder.Property(x => x.FullNameEn).HasColumnName("full_name_en").HasMaxLength(256).IsRequired();
@@ -28,6 +29,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.DeletedBy).HasColumnName("deleted_by");
 
         builder.HasIndex(x => new { x.TenantId, x.Email }).IsUnique().HasDatabaseName("ix_users_tenant_id_email");
+        builder.HasIndex(x => new { x.TenantId, x.PhoneNumber }).IsUnique().HasDatabaseName("ix_users_tenant_id_phone_number");
         builder.HasIndex(x => x.TenantId).HasDatabaseName("ix_users_tenant_id");
     }
 }

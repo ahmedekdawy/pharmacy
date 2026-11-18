@@ -41,7 +41,7 @@ export class LocalizationService {
 
   private readLanguage(): AppLanguage {
     const stored = localStorage.getItem(LANG_KEY);
-    return stored === 'ar' ? 'ar' : 'en';
+    return stored === 'en' ? 'en' : 'ar';
   }
 }
 

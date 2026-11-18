@@ -5,6 +5,7 @@ namespace Pharmacy.Domain.Identity;
 public class User : TenantOwnedEntity
 {
     public string Email { get; set; } = default!;
+    public string? PhoneNumber { get; set; }
     public string PasswordHash { get; set; } = default!;
     public string FullNameAr { get; set; } = default!;
     public string FullNameEn { get; set; } = default!;

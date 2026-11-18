@@ -15,6 +15,7 @@ interface ApiResponse<T> {
 interface UserDto {
   id: string;
   email: string;
+  phoneNumber?: string | null;
   fullNameEn: string;
   fullNameAr: string;
   isActive: boolean;
@@ -50,6 +51,7 @@ export class UsersPage implements OnInit {
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
+    phoneNumber: [''],
     password: ['', [Validators.required, Validators.minLength(8)]],
     fullNameEn: ['', Validators.required],
     fullNameAr: ['', Validators.required],
@@ -80,7 +82,7 @@ export class UsersPage implements OnInit {
 
   startCreate(): void {
     this.editingId.set(null);
-    this.form.reset({ email: '', password: '', fullNameEn: '', fullNameAr: '', roleId: '', isActive: true });
+    this.form.reset({ email: '', phoneNumber: '', password: '', fullNameEn: '', fullNameAr: '', roleId: '', isActive: true });
     this.form.controls.password.setValidators([Validators.required, Validators.minLength(8)]);
     this.form.controls.password.updateValueAndValidity();
   }
@@ -89,6 +91,7 @@ export class UsersPage implements OnInit {
     this.editingId.set(user.id);
     this.form.reset({
       email: user.email,
+      phoneNumber: user.phoneNumber ?? '',
       password: '',
       fullNameEn: user.fullNameEn,
       fullNameAr: user.fullNameAr,
@@ -116,6 +119,7 @@ export class UsersPage implements OnInit {
       this.http
         .put(`${environment.apiBaseUrl}/users/${editingId}`, {
           email: value.email,
+          phoneNumber: value.phoneNumber || null,
           fullNameEn: value.fullNameEn,
           fullNameAr: value.fullNameAr,
           password: value.password || null,
@@ -135,6 +139,7 @@ export class UsersPage implements OnInit {
     this.http
       .post(`${environment.apiBaseUrl}/users`, {
         email: value.email,
+        phoneNumber: value.phoneNumber || null,
         password: value.password,
         fullNameEn: value.fullNameEn,
         fullNameAr: value.fullNameAr,

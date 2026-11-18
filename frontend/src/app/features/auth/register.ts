@@ -27,6 +27,7 @@ export class Register {
     adminFullNameEn: ['', Validators.required],
     adminFullNameAr: ['', Validators.required],
     adminEmail: ['', [Validators.required, Validators.email]],
+    adminPhoneNumber: [''],
     adminPassword: ['', [Validators.required, Validators.minLength(8)]]
   });
 
@@ -52,6 +53,7 @@ export class Register {
         adminFullNameEn: value.adminFullNameEn!,
         adminFullNameAr: value.adminFullNameAr!,
         adminEmail: value.adminEmail!,
+        adminPhoneNumber: value.adminPhoneNumber || undefined,
         adminPassword: value.adminPassword!
       })
       .subscribe({

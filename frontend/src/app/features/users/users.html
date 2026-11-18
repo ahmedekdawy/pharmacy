@@ -10,6 +10,7 @@
   @if (auth.hasPermission(editingId() ? 'User.Edit' : 'User.Create')) {
     <form class="editor" [formGroup]="form" (ngSubmit)="submit()">
       <input formControlName="email" placeholder="Email" />
+      <input formControlName="phoneNumber" type="tel" placeholder="Mobile (optional)" />
       <input formControlName="password" type="password" [placeholder]="editingId() ? 'New password (optional)' : 'Password'" />
       <input formControlName="fullNameEn" placeholder="Name EN" />
       <input formControlName="fullNameAr" placeholder="Name AR" />
@@ -45,6 +46,9 @@
         <div>
           <strong>{{ user.fullNameEn }}</strong>
           <span>{{ user.email }}</span>
+          @if (user.phoneNumber) {
+            <span>{{ user.phoneNumber }}</span>
+          }
           <span>{{ user.roles.join(', ') }}</span>
           <em>{{ user.isActive ? 'Active' : 'Inactive' }}</em>
         </div>

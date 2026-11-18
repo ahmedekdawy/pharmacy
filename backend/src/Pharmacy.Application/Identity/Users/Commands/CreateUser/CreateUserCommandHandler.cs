@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pharmacy.Application.Common;
 using Pharmacy.Application.Common.Interfaces;
 using Pharmacy.Domain.Identity;
 
@@ -19,6 +20,7 @@ public sealed class CreateUserCommandHandler(
 
         var tenantId = currentTenant.TenantId.Value;
         var email = request.Email.Trim().ToLowerInvariant();
+        var phoneNumber = PhoneNumbers.Normalize(request.PhoneNumber);
 
         var exists = await db.Users.AnyAsync(x => x.Email.ToLower() == email, cancellationToken);
         if (exists)
@@ -26,10 +28,16 @@ public sealed class CreateUserCommandHandler(
             throw new InvalidOperationException("Email already exists for this tenant.");
         }
 
+        if (phoneNumber is not null && await db.Users.AnyAsync(x => x.PhoneNumber == phoneNumber, cancellationToken))
+        {
+            throw new InvalidOperationException("Phone number already exists for this tenant.");
+        }
+
         var user = new User
         {
             TenantId = tenantId,
             Email = email,
+            PhoneNumber = phoneNumber,
             PasswordHash = passwords.Hash(request.Password),
             FullNameEn = request.FullNameEn.Trim(),
             FullNameAr = request.FullNameAr.Trim(),

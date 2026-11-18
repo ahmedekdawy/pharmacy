@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pharmacy.Application.Common;
 using Pharmacy.Application.Common.Interfaces;
 using Pharmacy.Application.Identity.Auth.Commands.Login;
 using Pharmacy.Domain.Identity;
@@ -54,6 +55,7 @@ public sealed class RegisterTenantCommandHandler(
         {
             TenantId = tenant.Id,
             Email = email,
+            PhoneNumber = PhoneNumbers.Normalize(request.AdminPhoneNumber),
             PasswordHash = passwords.Hash(request.AdminPassword),
             FullNameEn = request.AdminFullNameEn.Trim(),
             FullNameAr = request.AdminFullNameAr.Trim(),

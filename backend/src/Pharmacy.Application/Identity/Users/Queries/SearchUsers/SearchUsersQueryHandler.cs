@@ -26,6 +26,7 @@ public sealed class SearchUsersQueryHandler(
             var term = request.Search.Trim().ToLowerInvariant();
             query = query.Where(x =>
                 x.Email.ToLower().Contains(term) ||
+                (x.PhoneNumber != null && x.PhoneNumber.Contains(term)) ||
                 x.FullNameEn.ToLower().Contains(term) ||
                 x.FullNameAr.ToLower().Contains(term));
         }
@@ -35,7 +36,7 @@ public sealed class SearchUsersQueryHandler(
             .OrderBy(x => x.FullNameEn)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new { x.Id, x.Email, x.FullNameEn, x.FullNameAr, x.IsActive, x.LastLoginAt })
+            .Select(x => new { x.Id, x.Email, x.PhoneNumber, x.FullNameEn, x.FullNameAr, x.IsActive, x.LastLoginAt })
             .ToListAsync(cancellationToken);
 
         var userIds = users.Select(x => x.Id).ToList();
@@ -49,6 +50,7 @@ public sealed class SearchUsersQueryHandler(
         var items = users.Select(u => new UserDto(
             u.Id,
             u.Email,
+            u.PhoneNumber,
             u.FullNameEn,
             u.FullNameAr,
             u.IsActive,

@@ -10,4 +10,5 @@ public sealed record RegisterTenantCommand(
     string AdminFullNameEn,
     string AdminFullNameAr,
     string AdminEmail,
+    string? AdminPhoneNumber,
     string AdminPassword) : IRequest<LoginResult>;

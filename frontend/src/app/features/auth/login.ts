@@ -22,7 +22,7 @@ export class Login {
 
   readonly form = this.fb.group({
     tenantCode: ['DEMO', Validators.required],
-    email: ['admin@demo.pharmacy', [Validators.required, Validators.email]],
+    identifier: ['admin@demo.pharmacy', Validators.required],
     password: ['Admin@123', Validators.required]
   });
 
@@ -38,9 +38,9 @@ export class Login {
 
     this.loading.set(true);
     this.error.set(null);
-    const { tenantCode, email, password } = this.form.getRawValue();
+    const { tenantCode, identifier, password } = this.form.getRawValue();
 
-    this.auth.login(tenantCode!, email!, password!).subscribe({
+    this.auth.login(tenantCode!, identifier!, password!).subscribe({
       next: () => {
         this.loading.set(false);
         void this.router.navigateByUrl('/app/products');

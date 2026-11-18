@@ -1190,6 +1190,11 @@ namespace Pharmacy.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("password_hash");
 
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("phone_number");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -1210,6 +1215,10 @@ namespace Pharmacy.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "Email")
                         .IsUnique()
                         .HasDatabaseName("ix_users_tenant_id_email");
+
+                    b.HasIndex("TenantId", "PhoneNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_tenant_id_phone_number");
 
                     b.ToTable("users", (string)null);
                 });

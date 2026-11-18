@@ -5,6 +5,7 @@ namespace Pharmacy.Application.Identity.Users.Commands.CreateUser;
 
 public sealed record CreateUserCommand(
     string Email,
+    string? PhoneNumber,
     string Password,
     string FullNameEn,
     string FullNameAr,

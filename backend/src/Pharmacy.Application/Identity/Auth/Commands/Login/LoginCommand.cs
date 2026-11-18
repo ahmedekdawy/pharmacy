@@ -4,7 +4,7 @@ namespace Pharmacy.Application.Identity.Auth.Commands.Login;
 
 public sealed record LoginCommand(
     string TenantCode,
-    string Email,
+    string EmailOrMobile,
     string Password) : IRequest<LoginResult>;
 
 public sealed record LoginResult(

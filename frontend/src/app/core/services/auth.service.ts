@@ -35,6 +35,7 @@ export interface RegisterTenantPayload {
   adminFullNameEn: string;
   adminFullNameAr: string;
   adminEmail: string;
+  adminPhoneNumber?: string;
   adminPassword: string;
 }
 
@@ -59,11 +60,11 @@ export class AuthService {
   readonly pages = computed(() => this.session()?.pages ?? []);
   readonly permissions = computed(() => this.session()?.permissions ?? []);
 
-  login(tenantCode: string, email: string, password: string): Observable<ApiResponse<LoginResult>> {
+  login(tenantCode: string, emailOrMobile: string, password: string): Observable<ApiResponse<LoginResult>> {
     return this.http
       .post<ApiResponse<LoginResult>>(`${environment.apiBaseUrl}/auth/login`, {
         tenantCode,
-        email,
+        emailOrMobile,
         password
       })
       .pipe(

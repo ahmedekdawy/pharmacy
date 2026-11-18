@@ -12,6 +12,7 @@ public sealed class RegisterTenantCommandValidator : AbstractValidator<RegisterT
         RuleFor(x => x.AdminFullNameEn).NotEmpty().MaximumLength(256);
         RuleFor(x => x.AdminFullNameAr).NotEmpty().MaximumLength(256);
         RuleFor(x => x.AdminEmail).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.AdminPhoneNumber).MaximumLength(32).When(x => !string.IsNullOrWhiteSpace(x.AdminPhoneNumber));
         RuleFor(x => x.AdminPassword).NotEmpty().MinimumLength(8).MaximumLength(256);
     }
 }

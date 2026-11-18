@@ -3,6 +3,7 @@ namespace Pharmacy.Application.Identity.Users.Queries;
 public sealed record UserDto(
     Guid Id,
     string Email,
+    string? PhoneNumber,
     string FullNameEn,
     string FullNameAr,
     bool IsActive,

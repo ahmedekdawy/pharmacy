@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pharmacy.Application.Common;
 using Pharmacy.Application.Common.Interfaces;
 using Pharmacy.Domain.Identity;
 
@@ -9,6 +10,7 @@ namespace Pharmacy.Application.Identity.Users.Commands.UpdateUser;
 public sealed record UpdateUserCommand(
     Guid UserId,
     string Email,
+    string? PhoneNumber,
     string FullNameEn,
     string FullNameAr,
     string? Password,
@@ -21,6 +23,7 @@ public sealed class UpdateUserCommandValidator : AbstractValidator<UpdateUserCom
     {
         RuleFor(x => x.UserId).NotEmpty();
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.PhoneNumber).MaximumLength(32).When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber));
         RuleFor(x => x.FullNameEn).NotEmpty().MaximumLength(256);
         RuleFor(x => x.FullNameAr).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Password).MinimumLength(8).MaximumLength(256).When(x => !string.IsNullOrWhiteSpace(x.Password));
@@ -51,7 +54,20 @@ public sealed class UpdateUserCommandHandler(
             throw new InvalidOperationException("Email already exists for this tenant.");
         }
 
+        var phoneNumber = PhoneNumbers.Normalize(request.PhoneNumber);
+        if (phoneNumber is not null)
+        {
+            var phoneTaken = await db.Users.AnyAsync(
+                x => x.Id != request.UserId && x.PhoneNumber == phoneNumber,
+                cancellationToken);
+            if (phoneTaken)
+            {
+                throw new InvalidOperationException("Phone number already exists for this tenant.");
+            }
+        }
+
         user.Email = email;
+        user.PhoneNumber = phoneNumber;
         user.FullNameEn = request.FullNameEn.Trim();
         user.FullNameAr = request.FullNameAr.Trim();
         user.IsActive = request.IsActive;
