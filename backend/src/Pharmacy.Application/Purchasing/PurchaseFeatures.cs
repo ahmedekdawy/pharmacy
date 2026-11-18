@@ -2,17 +2,21 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Pharmacy.Application.Common.Interfaces;
+using Pharmacy.Domain.Catalog;
 using Pharmacy.Domain.Inventory;
 using Pharmacy.Domain.Purchasing;
 
 namespace Pharmacy.Application.Purchasing;
 
+/// <param name="Quantity">Quantity in <paramref name="Unit"/> (boxes by default).</param>
+/// <param name="UnitCost">Cost of one <paramref name="Unit"/>.</param>
 public sealed record PurchaseLineInput(
     Guid ProductId,
     string BatchNumber,
     DateOnly? ExpiryDate,
     decimal Quantity,
-    decimal UnitCost);
+    decimal UnitCost,
+    SaleUnit Unit = SaleUnit.Box);
 
 public sealed record ReceivePurchaseCommand(
     Guid SupplierId,
@@ -95,8 +99,13 @@ public sealed class ReceivePurchaseCommandHandler(IPharmacyDbContext db, ICurren
         decimal total = 0;
         foreach (var line in request.Items)
         {
-            if (!await db.Products.AnyAsync(x => x.Id == line.ProductId && x.IsActive, cancellationToken))
-                throw new InvalidOperationException("Product not found.");
+            var product = await db.Products.FirstOrDefaultAsync(x => x.Id == line.ProductId && x.IsActive, cancellationToken)
+                ?? throw new InvalidOperationException("Product not found.");
+
+            // Stock is stored in smallest units; cost per smallest unit.
+            var factor = product.FactorFor(line.Unit);
+            var baseQuantity = line.Quantity * factor;
+            var baseCost = line.UnitCost / factor;
 
             var batchNumber = line.BatchNumber.Trim();
             var batch = await db.ProductBatches.FirstOrDefaultAsync(
@@ -111,8 +120,8 @@ public sealed class ReceivePurchaseCommandHandler(IPharmacyDbContext db, ICurren
                     ProductId = line.ProductId,
                     BatchNumber = batchNumber,
                     ExpiryDate = line.ExpiryDate,
-                    PurchasePrice = line.UnitCost,
-                    AvailableQuantity = line.Quantity,
+                    PurchasePrice = baseCost,
+                    AvailableQuantity = baseQuantity,
                     CreatedAt = DateTimeOffset.UtcNow
                 };
                 db.ProductBatches.Add(batch);
@@ -120,8 +129,8 @@ public sealed class ReceivePurchaseCommandHandler(IPharmacyDbContext db, ICurren
             }
             else
             {
-                batch.AvailableQuantity += line.Quantity;
-                batch.PurchasePrice = line.UnitCost;
+                batch.AvailableQuantity += baseQuantity;
+                batch.PurchasePrice = baseCost;
                 if (line.ExpiryDate.HasValue) batch.ExpiryDate = line.ExpiryDate;
             }
 
@@ -136,6 +145,7 @@ public sealed class ReceivePurchaseCommandHandler(IPharmacyDbContext db, ICurren
                 BatchNumber = batchNumber,
                 ExpiryDate = line.ExpiryDate,
                 Quantity = line.Quantity,
+                BaseQuantity = baseQuantity,
                 UnitCost = line.UnitCost,
                 LineTotal = lineTotal,
                 CreatedAt = DateTimeOffset.UtcNow
@@ -148,7 +158,7 @@ public sealed class ReceivePurchaseCommandHandler(IPharmacyDbContext db, ICurren
                 ProductId = line.ProductId,
                 BatchId = batch.Id,
                 TransactionType = InventoryTransactionType.Purchase,
-                Quantity = line.Quantity,
+                Quantity = baseQuantity,
                 ReferenceType = "Purchase",
                 ReferenceId = purchase.Id,
                 CreatedAt = DateTimeOffset.UtcNow

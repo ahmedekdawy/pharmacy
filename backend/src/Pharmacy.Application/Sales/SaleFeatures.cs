@@ -2,18 +2,48 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Pharmacy.Application.Common.Interfaces;
+using Pharmacy.Application.Customers;
+using Pharmacy.Domain.Catalog;
+using Pharmacy.Domain.Common;
 using Pharmacy.Domain.Inventory;
 using Pharmacy.Domain.Sales;
 
 namespace Pharmacy.Application.Sales;
 
-public sealed record SaleLineInput(Guid ProductId, Guid? BatchId, decimal Quantity, decimal? UnitPrice);
+/// <param name="Unit">Box (default), Strip or Unit. Quantity is expressed in this unit.</param>
+public sealed record SaleLineInput(
+    Guid ProductId,
+    Guid? BatchId,
+    decimal Quantity,
+    decimal? UnitPrice,
+    SaleUnit Unit = SaleUnit.Box);
 
+/// <param name="Id">Optional client-generated id. Makes the request idempotent (safe to retry / sync).</param>
+/// <param name="Number">Optional client-generated invoice number (used by offline devices).</param>
+/// <param name="SoldAt">Optional time of sale on the device (offline sales).</param>
+/// <param name="PaidAmount">Amount paid now. When null the full total is considered paid.</param>
+/// <param name="IsOffline">True when the sale was recorded offline; stock shortages become warnings instead of errors.</param>
 public sealed record CreateSaleCommand(
     Guid LocationId,
     Guid? CustomerId,
     string? Notes,
-    IReadOnlyList<SaleLineInput> Items) : IRequest<Guid>;
+    IReadOnlyList<SaleLineInput> Items,
+    Guid? Id = null,
+    string? Number = null,
+    DateTimeOffset? SoldAt = null,
+    decimal DiscountAmount = 0,
+    decimal? PaidAmount = null,
+    string? PaymentMethod = null,
+    string? DeviceId = null,
+    bool IsOffline = false) : IRequest<CreateSaleResult>;
+
+public sealed record CreateSaleResult(
+    Guid Id,
+    string Number,
+    decimal TotalAmount,
+    decimal DueAmount,
+    bool AlreadyExisted,
+    IReadOnlyList<string> Warnings);
 
 public sealed record SaleDto(
     Guid Id,
@@ -22,11 +52,23 @@ public sealed record SaleDto(
     string LocationNameEn,
     Guid? CustomerId,
     string? CustomerNameEn,
+    string? CustomerNameAr,
     DateTimeOffset SoldAt,
+    decimal SubTotal,
+    decimal DiscountAmount,
     decimal TotalAmount,
+    decimal PaidAmount,
+    decimal DueAmount,
+    string PaymentMethod,
+    string Source,
+    bool HasStockWarning,
     string Status);
 
-public sealed record GetSalesQuery : IRequest<IReadOnlyList<SaleDto>>;
+public sealed record GetSalesQuery(
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    Guid? CustomerId = null,
+    int Take = 100) : IRequest<IReadOnlyList<SaleDto>>;
 
 public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCommand>
 {
@@ -34,10 +76,17 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
     {
         RuleFor(x => x.LocationId).NotEmpty();
         RuleFor(x => x.Items).NotEmpty();
+        RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.PaidAmount).GreaterThanOrEqualTo(0).When(x => x.PaidAmount.HasValue);
+        RuleFor(x => x.Number).MaximumLength(64);
+        RuleFor(x => x.DeviceId).MaximumLength(64);
+        RuleFor(x => x.Notes).MaximumLength(512);
         RuleForEach(x => x.Items).ChildRules(item =>
         {
             item.RuleFor(i => i.ProductId).NotEmpty();
             item.RuleFor(i => i.Quantity).GreaterThan(0);
+            item.RuleFor(i => i.Unit).IsInEnum();
+            item.RuleFor(i => i.UnitPrice).GreaterThanOrEqualTo(0).When(i => i.UnitPrice.HasValue);
         });
     }
 }
@@ -49,8 +98,15 @@ public sealed class GetSalesQueryHandler(IPharmacyDbContext db, ICurrentTenant c
     {
         if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
 
+        var sales = db.Sales.AsNoTracking();
+        if (request.From.HasValue) sales = sales.Where(x => x.SoldAt >= request.From);
+        if (request.To.HasValue) sales = sales.Where(x => x.SoldAt < request.To);
+        if (request.CustomerId.HasValue) sales = sales.Where(x => x.CustomerId == request.CustomerId);
+
+        var take = request.Take is < 1 or > 1000 ? 100 : request.Take;
+
         return await (
-            from s in db.Sales.AsNoTracking()
+            from s in sales
             join l in db.Locations.AsNoTracking() on s.LocationId equals l.Id
             join c in db.Customers.AsNoTracking() on s.CustomerId equals c.Id into customers
             from c in customers.DefaultIfEmpty()
@@ -62,102 +118,261 @@ public sealed class GetSalesQueryHandler(IPharmacyDbContext db, ICurrentTenant c
                 l.NameEn,
                 c != null ? c.Id : null,
                 c != null ? c.NameEn : null,
+                c != null ? c.NameAr : null,
                 s.SoldAt,
+                s.SubTotal,
+                s.DiscountAmount,
                 s.TotalAmount,
+                s.PaidAmount,
+                s.DueAmount,
+                s.PaymentMethod,
+                s.Source,
+                s.HasStockWarning,
                 s.Status)
-        ).Take(100).ToListAsync(cancellationToken);
+        ).Take(take).ToListAsync(cancellationToken);
     }
 }
 
 public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTenant currentTenant)
-    : IRequestHandler<CreateSaleCommand, Guid>
+    : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
-    public async Task<Guid> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
+    public async Task<CreateSaleResult> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
         if (currentTenant.TenantId is null) throw new InvalidOperationException("Tenant is required.");
         var tenantId = currentTenant.TenantId.Value;
+        var now = DateTimeOffset.UtcNow;
+        var warnings = new List<string>();
 
-        if (!await db.Locations.AnyAsync(x => x.Id == request.LocationId && x.IsActive, cancellationToken))
+        // Idempotency: a retried / re-synced sale returns the original result.
+        if (request.Id.HasValue)
+        {
+            var existing = await db.Sales.AsNoTracking()
+                .Where(x => x.Id == request.Id.Value)
+                .Select(x => new { x.Id, x.Number, x.TotalAmount, x.DueAmount })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existing is not null)
+                return new CreateSaleResult(existing.Id, existing.Number, existing.TotalAmount, existing.DueAmount, true, []);
+        }
+
+        if (!await db.Locations.AnyAsync(x => x.Id == request.LocationId, cancellationToken))
             throw new InvalidOperationException("Location not found.");
 
         if (request.CustomerId.HasValue &&
-            !await db.Customers.AnyAsync(x => x.Id == request.CustomerId && x.IsActive, cancellationToken))
+            !await db.Customers.AnyAsync(x => x.Id == request.CustomerId, cancellationToken))
             throw new InvalidOperationException("Customer not found.");
+
+        var soldAt = request.SoldAt ?? now;
+        if (soldAt > now.AddMinutes(10)) soldAt = now; // device clock in the future
 
         var sale = new Sale
         {
+            Id = request.Id ?? Guid.NewGuid(),
             TenantId = tenantId,
-            Number = $"SO-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            Number = await ResolveNumberAsync(request.Number, soldAt, cancellationToken),
             LocationId = request.LocationId,
             CustomerId = request.CustomerId,
-            SoldAt = DateTimeOffset.UtcNow,
-            Notes = request.Notes,
+            SoldAt = soldAt,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
             Status = "Completed",
-            CreatedAt = DateTimeOffset.UtcNow
+            Source = request.IsOffline ? "Offline" : "Online",
+            DeviceId = request.DeviceId,
+            PaymentMethod = PaymentMethods.Normalize(request.PaymentMethod),
+            CreatedAt = now
         };
 
-        decimal total = 0;
+        var productIds = request.Items.Select(x => x.ProductId).Distinct().ToList();
+        var products = await db.Products
+            .Where(x => productIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        var batches = await db.ProductBatches
+            .Where(x => productIds.Contains(x.ProductId))
+            .ToListAsync(cancellationToken);
+
+        decimal subTotal = 0;
 
         foreach (var line in request.Items)
         {
-            var product = await db.Products.FirstOrDefaultAsync(x => x.Id == line.ProductId && x.IsActive, cancellationToken)
-                ?? throw new InvalidOperationException("Product not found.");
-
-            ProductBatch? batch;
-            if (line.BatchId.HasValue)
+            if (!products.TryGetValue(line.ProductId, out var product))
+                throw new InvalidOperationException("Product not found.");
+            if (!product.IsActive && !request.IsOffline)
+                throw new InvalidOperationException($"Product {product.Code} is inactive.");
+            if (!product.CanSellIn(line.Unit))
             {
-                batch = await db.ProductBatches.FirstOrDefaultAsync(x => x.Id == line.BatchId && x.ProductId == line.ProductId, cancellationToken)
-                    ?? throw new InvalidOperationException("Batch not found.");
+                if (!request.IsOffline)
+                    throw new InvalidOperationException($"Product {product.Code} cannot be sold by {line.Unit.ToString().ToLowerInvariant()}.");
+                warnings.Add($"{product.Code}: sold by {line.Unit} although it is not enabled.");
+            }
+
+            var factor = product.FactorFor(line.Unit);
+            var unitPrice = line.UnitPrice ?? product.PriceFor(line.Unit);
+            var lineTotal = Math.Round(unitPrice * line.Quantity, 2);
+            var baseRequired = line.Quantity * factor;
+            subTotal += lineTotal;
+
+            var allocations = Allocate(product, line, baseRequired, batches, request.IsOffline, warnings);
+            if (warnings.Count > 0 && request.IsOffline) sale.HasStockWarning = true;
+
+            // Split the line across batches proportionally, keeping the line total exact.
+            decimal allocatedTotal = 0;
+            for (var i = 0; i < allocations.Count; i++)
+            {
+                var (batch, baseQty) = allocations[i];
+                var qtyInUnit = baseQty / factor;
+                var isLast = i == allocations.Count - 1;
+                var sliceTotal = isLast ? lineTotal - allocatedTotal : Math.Round(unitPrice * qtyInUnit, 2);
+                allocatedTotal += sliceTotal;
+
+                if (batch is not null) batch.AvailableQuantity -= baseQty;
+
+                sale.Items.Add(new SaleItem
+                {
+                    TenantId = tenantId,
+                    ProductId = product.Id,
+                    BatchId = batch?.Id,
+                    Quantity = qtyInUnit,
+                    Unit = line.Unit,
+                    UnitFactor = factor,
+                    BaseQuantity = baseQty,
+                    UnitPrice = unitPrice,
+                    LineTotal = sliceTotal,
+                    CreatedAt = now
+                });
+
+                db.InventoryTransactions.Add(new InventoryTransaction
+                {
+                    TenantId = tenantId,
+                    LocationId = request.LocationId,
+                    ProductId = product.Id,
+                    BatchId = batch?.Id,
+                    TransactionType = InventoryTransactionType.Sale,
+                    Quantity = baseQty,
+                    ReferenceType = "Sale",
+                    ReferenceId = sale.Id,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        var discount = Math.Min(Math.Round(request.DiscountAmount, 2), subTotal);
+        var total = subTotal - discount;
+        var paid = Math.Min(Math.Round(request.PaidAmount ?? total, 2), total);
+        var due = total - paid;
+
+        if (due > 0)
+        {
+            if (sale.CustomerId is null)
+                throw new InvalidOperationException("A customer is required for credit (deferred) sales.");
+
+            var customer = await db.Customers.AsNoTracking().FirstAsync(x => x.Id == sale.CustomerId, cancellationToken);
+            if (customer.CreditLimit > 0)
+            {
+                var balance = (await CustomerBalances.GetAsync(db, [customer.Id], cancellationToken))
+                    .GetValueOrDefault(customer.Id);
+                if (balance + due > customer.CreditLimit)
+                {
+                    var message = $"Credit limit exceeded for customer {customer.Code} (limit {customer.CreditLimit:0.##}, balance {balance:0.##}).";
+                    if (!request.IsOffline) throw new InvalidOperationException(message);
+                    warnings.Add(message);
+                }
+            }
+        }
+
+        sale.SubTotal = subTotal;
+        sale.DiscountAmount = discount;
+        sale.TotalAmount = total;
+        sale.PaidAmount = paid;
+        sale.DueAmount = due;
+        if (warnings.Count > 0)
+        {
+            var note = string.Join(" | ", warnings);
+            sale.Notes = string.IsNullOrEmpty(sale.Notes) ? note : $"{sale.Notes} | {note}";
+            if (sale.Notes.Length > 512) sale.Notes = sale.Notes[..512];
+        }
+
+        db.Sales.Add(sale);
+        await db.SaveChangesAsync(cancellationToken);
+        return new CreateSaleResult(sale.Id, sale.Number, sale.TotalAmount, sale.DueAmount, false, warnings);
+    }
+
+    /// <summary>
+    /// Picks stock batches FEFO (first expiry, first out), in smallest units.
+    /// Online sales fail on shortage; offline sales record the shortage as a warning and
+    /// let the last batch go negative so stock reconciles once the purchase is entered.
+    /// </summary>
+    private static List<(ProductBatch? Batch, decimal BaseQty)> Allocate(
+        Product product,
+        SaleLineInput line,
+        decimal baseRequired,
+        List<ProductBatch> batches,
+        bool lenient,
+        List<string> warnings)
+    {
+        var result = new List<(ProductBatch?, decimal)>();
+        var candidates = batches.Where(x => x.ProductId == product.Id).ToList();
+
+        if (line.BatchId.HasValue)
+        {
+            var chosen = candidates.FirstOrDefault(x => x.Id == line.BatchId);
+            if (chosen is null)
+            {
+                if (!lenient) throw new InvalidOperationException("Batch not found.");
             }
             else
             {
-                // FEFO: earliest expiry first
-                batch = await db.ProductBatches
-                    .Where(x => x.ProductId == line.ProductId && x.AvailableQuantity > 0)
-                    .OrderBy(x => x.ExpiryDate == null)
-                    .ThenBy(x => x.ExpiryDate)
-                    .ThenBy(x => x.CreatedAt)
-                    .FirstOrDefaultAsync(cancellationToken)
-                    ?? throw new InvalidOperationException($"No stock available for product {product.Code}.");
+                candidates = [chosen, .. candidates.Where(x => x.Id != chosen.Id)];
             }
-
-            if (batch.AvailableQuantity < line.Quantity)
-                throw new InvalidOperationException($"Insufficient stock for product {product.Code}.");
-
-            batch.AvailableQuantity -= line.Quantity;
-
-            var unitPrice = line.UnitPrice ?? product.SellingPrice;
-            var lineTotal = unitPrice * line.Quantity;
-            total += lineTotal;
-
-            sale.Items.Add(new SaleItem
-            {
-                TenantId = tenantId,
-                ProductId = line.ProductId,
-                BatchId = batch.Id,
-                Quantity = line.Quantity,
-                UnitPrice = unitPrice,
-                LineTotal = lineTotal,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
-
-            db.InventoryTransactions.Add(new InventoryTransaction
-            {
-                TenantId = tenantId,
-                LocationId = request.LocationId,
-                ProductId = line.ProductId,
-                BatchId = batch.Id,
-                TransactionType = InventoryTransactionType.Sale,
-                Quantity = line.Quantity,
-                ReferenceType = "Sale",
-                ReferenceId = sale.Id,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
+        }
+        else
+        {
+            candidates = candidates
+                .OrderBy(x => x.ExpiryDate == null)
+                .ThenBy(x => x.ExpiryDate)
+                .ThenBy(x => x.CreatedAt)
+                .ToList();
         }
 
-        sale.TotalAmount = total;
-        db.Sales.Add(sale);
-        await db.SaveChangesAsync(cancellationToken);
-        return sale.Id;
+        var remaining = baseRequired;
+        foreach (var batch in candidates)
+        {
+            if (remaining <= 0) break;
+            if (batch.AvailableQuantity <= 0) continue;
+            var take = Math.Min(batch.AvailableQuantity, remaining);
+            result.Add((batch, take));
+            remaining -= take;
+        }
+
+        if (remaining > 0)
+        {
+            if (!lenient)
+                throw new InvalidOperationException($"Insufficient stock for product {product.Code}.");
+
+            warnings.Add($"{product.Code}: stock short by {remaining:0.##} unit(s).");
+            var fallback = candidates.LastOrDefault();
+            var existingIndex = result.FindIndex(x => x.Item1 == fallback);
+            if (fallback is not null && existingIndex >= 0)
+                result[existingIndex] = (fallback, result[existingIndex].Item2 + remaining);
+            else
+                result.Add((fallback, remaining));
+        }
+
+        return result;
+    }
+
+    private async Task<string> ResolveNumberAsync(string? requested, DateTimeOffset soldAt, CancellationToken cancellationToken)
+    {
+        var number = string.IsNullOrWhiteSpace(requested)
+            ? $"INV-{soldAt:yyMMdd}-{Random.Shared.Next(0, 1_000_000):000000}"
+            : requested.Trim();
+
+        var candidate = number;
+        var suffix = 1;
+        while (await db.Sales.IgnoreQueryFilters()
+                   .AnyAsync(x => x.TenantId == currentTenant.TenantId && x.Number == candidate, cancellationToken))
+        {
+            candidate = $"{number}-{suffix++}";
+        }
+
+        return candidate;
     }
 }

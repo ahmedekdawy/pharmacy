@@ -56,7 +56,13 @@ public sealed class ProductsController(IMediator mediator) : ControllerBase
             body.CategoryId,
             body.BrandId,
             body.SellingPrice,
-            body.IsActive), cancellationToken);
+            body.IsActive,
+            body.StripsPerBox,
+            body.UnitsPerStrip,
+            body.AllowStripSale,
+            body.AllowUnitSale,
+            body.StripPrice,
+            body.UnitPrice), cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { id }));
     }
 
@@ -77,4 +83,10 @@ public sealed record UpdateProductRequest(
     Guid? CategoryId,
     Guid? BrandId,
     decimal SellingPrice,
-    bool IsActive = true);
+    bool IsActive = true,
+    int StripsPerBox = 1,
+    int UnitsPerStrip = 1,
+    bool AllowStripSale = false,
+    bool AllowUnitSale = false,
+    decimal? StripPrice = null,
+    decimal? UnitPrice = null);

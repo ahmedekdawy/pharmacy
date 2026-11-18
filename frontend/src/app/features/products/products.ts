@@ -51,8 +51,25 @@ export class Products implements OnInit, OnDestroy {
     nameEn: ['', Validators.required],
     barcode: [''],
     sellingPrice: [0, [Validators.required, Validators.min(0)]],
-    isActive: [true]
+    isActive: [true],
+    stripsPerBox: [1, [Validators.required, Validators.min(1)]],
+    unitsPerStrip: [1, [Validators.required, Validators.min(1)]],
+    allowStripSale: [false],
+    allowUnitSale: [false],
+    stripPrice: [null as number | null],
+    unitPrice: [null as number | null]
   });
+
+  derivedStripPrice(): string {
+    const v = this.form.getRawValue();
+    return (Number(v.sellingPrice) / Math.max(1, Number(v.stripsPerBox) || 1)).toFixed(2);
+  }
+
+  derivedUnitPrice(): string {
+    const v = this.form.getRawValue();
+    const units = Math.max(1, Number(v.stripsPerBox) || 1) * Math.max(1, Number(v.unitsPerStrip) || 1);
+    return (Number(v.sellingPrice) / units).toFixed(2);
+  }
 
   ngOnInit(): void {
     this.reload();
@@ -125,7 +142,13 @@ export class Products implements OnInit, OnDestroy {
       nameAr: product.nameAr,
       barcode: product.barcode ?? '',
       sellingPrice: product.sellingPrice,
-      isActive: product.isActive
+      isActive: product.isActive,
+      stripsPerBox: product.stripsPerBox ?? 1,
+      unitsPerStrip: product.unitsPerStrip ?? 1,
+      allowStripSale: !!product.allowStripSale,
+      allowUnitSale: !!product.allowUnitSale,
+      stripPrice: product.stripPrice ?? null,
+      unitPrice: product.unitPrice ?? null
     });
   }
 
@@ -139,7 +162,16 @@ export class Products implements OnInit, OnDestroy {
     this.catalogSearch.setValue('');
     this.catalogResults.set([]);
     this.catalogOpen.set(false);
-    this.form.reset({ sellingPrice: 0, isActive: true });
+    this.form.reset({
+      sellingPrice: 0,
+      isActive: true,
+      stripsPerBox: 1,
+      unitsPerStrip: 1,
+      allowStripSale: false,
+      allowUnitSale: false,
+      stripPrice: null,
+      unitPrice: null
+    });
   }
 
   reload(): void {
@@ -170,7 +202,13 @@ export class Products implements OnInit, OnDestroy {
       nameEn: value.nameEn!,
       barcode: value.barcode || undefined,
       sellingPrice: Number(value.sellingPrice),
-      isActive: !!value.isActive
+      isActive: !!value.isActive,
+      stripsPerBox: Math.max(1, Math.floor(Number(value.stripsPerBox) || 1)),
+      unitsPerStrip: Math.max(1, Math.floor(Number(value.unitsPerStrip) || 1)),
+      allowStripSale: !!value.allowStripSale,
+      allowUnitSale: !!value.allowUnitSale,
+      stripPrice: value.stripPrice === null || value.stripPrice === undefined || `${value.stripPrice}` === '' ? null : Number(value.stripPrice),
+      unitPrice: value.unitPrice === null || value.unitPrice === undefined || `${value.unitPrice}` === '' ? null : Number(value.unitPrice)
     };
 
     if (editingId) {

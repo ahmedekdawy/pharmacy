@@ -16,7 +16,17 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.LocationId).HasColumnName("location_id").IsRequired();
         builder.Property(x => x.CustomerId).HasColumnName("customer_id");
         builder.Property(x => x.SoldAt).HasColumnName("sold_at");
+        builder.Property(x => x.SubTotal).HasColumnName("sub_total").HasPrecision(18, 4);
+        builder.Property(x => x.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 4);
         builder.Property(x => x.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 4);
+        builder.Property(x => x.PaidAmount).HasColumnName("paid_amount").HasPrecision(18, 4);
+        builder.Property(x => x.DueAmount).HasColumnName("due_amount").HasPrecision(18, 4);
+        builder.Property(x => x.PaymentMethod).HasColumnName("payment_method").HasMaxLength(32).HasDefaultValue("Cash");
+        builder.Property(x => x.Source).HasColumnName("source").HasMaxLength(16).HasDefaultValue("Online");
+        builder.Property(x => x.DeviceId).HasColumnName("device_id").HasMaxLength(64);
+        builder.Property(x => x.HasStockWarning).HasColumnName("has_stock_warning");
+        builder.HasIndex(x => new { x.TenantId, x.SoldAt }).HasDatabaseName("ix_sales_tenant_id_sold_at");
+        builder.HasIndex(x => new { x.TenantId, x.CustomerId }).HasDatabaseName("ix_sales_tenant_id_customer_id");
         builder.Property(x => x.Status).HasColumnName("status").HasMaxLength(32);
         builder.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(512);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");

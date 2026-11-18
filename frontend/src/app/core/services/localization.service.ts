@@ -24,6 +24,11 @@ export class LocalizationService {
     this.apply(lang);
   }
 
+  /** Inline bilingual text: returns the Arabic or English variant for the current language. */
+  pick(en: string, ar: string): string {
+    return this.language() === 'ar' ? ar : en;
+  }
+
   translate(key: string): string {
     const dict = this.language() === 'ar' ? ar : en;
     return dict[key] ?? key;

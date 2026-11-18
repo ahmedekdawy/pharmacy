@@ -17,6 +17,7 @@ public sealed class SaleReturnItemConfiguration : IEntityTypeConfiguration<SaleR
         builder.Property(x => x.ProductId).HasColumnName("product_id").IsRequired();
         builder.Property(x => x.BatchId).HasColumnName("batch_id");
         builder.Property(x => x.Quantity).HasColumnName("quantity").HasPrecision(18, 4);
+        builder.Property(x => x.BaseQuantity).HasColumnName("base_quantity").HasPrecision(18, 4);
         builder.Property(x => x.UnitPrice).HasColumnName("unit_price").HasPrecision(18, 4);
         builder.Property(x => x.LineTotal).HasColumnName("line_total").HasPrecision(18, 4);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");

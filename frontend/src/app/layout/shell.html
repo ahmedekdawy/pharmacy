@@ -1,10 +1,10 @@
-<div class="shell" [class.collapsed]="collapsed()" [attr.data-theme]="theme.theme()">
+<div class="shell" [class.collapsed]="desktopCollapsed()" [class.mobile-open]="mobileOpen()" [attr.data-theme]="theme.theme()">
   <aside class="sidebar" [attr.aria-label]="t('COMMON.MENU')">
     <div class="sidebar-header">
       <div class="sidebar-top">
         <div class="brand-block">
           <span class="brand-mark" aria-hidden="true">P</span>
-          @if (!collapsed()) {
+          @if (showLabels()) {
             <div class="brand-text">
               <strong>{{ t('BRAND.NAME') }}</strong>
               <span>{{ t('BRAND.TAGLINE') }}</span>
@@ -31,7 +31,7 @@
 
       <div class="user-card" [attr.title]="userLabel()">
         <div class="avatar" aria-hidden="true">{{ userLabel().charAt(0) || 'U' }}</div>
-        @if (!collapsed()) {
+        @if (showLabels()) {
           <div class="user-meta">
             <strong>{{ userLabel() }}</strong>
             <span>{{ auth.user()?.email }}</span>
@@ -48,7 +48,7 @@
           [attr.title]="page.label"
         >
           <span class="nav-icon" [attr.data-icon]="page.icon" aria-hidden="true"></span>
-          @if (!collapsed()) {
+          @if (showLabels()) {
             <span class="nav-label">{{ page.label }}</span>
           }
         </a>
@@ -58,7 +58,7 @@
     <div class="sidebar-footer">
       <button type="button" class="logout-btn" (click)="logout()" [attr.title]="t('COMMON.LOGOUT')">
         <span class="nav-icon" data-icon="logout" aria-hidden="true"></span>
-        @if (!collapsed()) {
+        @if (showLabels()) {
           <span>{{ t('COMMON.LOGOUT') }}</span>
         }
       </button>
@@ -77,6 +77,21 @@
       </div>
 
       <div class="topbar-actions">
+        <a
+          routerLink="/app/sync"
+          class="sync-pill"
+          [class.offline]="!sync.online()"
+          [class.warn]="sync.failedCount() > 0 || sync.authExpired()"
+          [class.busy]="sync.syncing()"
+          [attr.title]="syncLabel()"
+        >
+          <span class="dot" aria-hidden="true"></span>
+          <span class="sync-text">{{ syncLabel() }}</span>
+          @if (sync.pendingCount() + sync.failedCount()) {
+            <span class="count">{{ sync.pendingCount() + sync.failedCount() }}</span>
+          }
+        </a>
+
         <button
           type="button"
           class="icon-btn surface"
@@ -114,4 +129,8 @@
       <router-outlet />
     </main>
   </div>
+
+  @if (mobileOpen()) {
+    <button type="button" class="backdrop" (click)="mobileOpen.set(false)" [attr.aria-label]="t('COMMON.COLLAPSE')"></button>
+  }
 </div>

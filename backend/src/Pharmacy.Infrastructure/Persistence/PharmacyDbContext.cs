@@ -29,10 +29,12 @@ public sealed class PharmacyDbContext(
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<DrugBarcode> DrugBarcodes => Set<DrugBarcode>();
     public DbSet<ProductBatch> ProductBatches => Set<ProductBatch>();
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerPayment> CustomerPayments => Set<CustomerPayment>();
     public DbSet<Purchase> Purchases => Set<Purchase>();
     public DbSet<PurchaseItem> PurchaseItems => Set<PurchaseItem>();
     public DbSet<Sale> Sales => Set<Sale>();
@@ -57,6 +59,8 @@ public sealed class PharmacyDbContext(
         ApplyTenantAndSoftDeleteFilters(modelBuilder);
         base.OnModelCreating(modelBuilder);
     }
+
+    public void ClearChanges() => ChangeTracker.Clear();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

@@ -26,6 +26,21 @@ export interface ProductDto {
   categoryId?: string | null;
   sellingPrice: number;
   isActive: boolean;
+  stripsPerBox?: number;
+  unitsPerStrip?: number;
+  allowStripSale?: boolean;
+  allowUnitSale?: boolean;
+  stripPrice?: number | null;
+  unitPrice?: number | null;
+}
+
+export interface ProductPackFields {
+  stripsPerBox?: number;
+  unitsPerStrip?: number;
+  allowStripSale?: boolean;
+  allowUnitSale?: boolean;
+  stripPrice?: number | null;
+  unitPrice?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -39,7 +54,7 @@ export class ApiService {
     });
   }
 
-  createProduct(body: {
+  createProduct(body: ProductPackFields & {
     code: string;
     nameAr: string;
     nameEn: string;
@@ -52,7 +67,7 @@ export class ApiService {
 
   updateProduct(
     id: string,
-    body: {
+    body: ProductPackFields & {
       code: string;
       nameAr: string;
       nameEn: string;

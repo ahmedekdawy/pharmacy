@@ -8,4 +8,6 @@ public sealed record CreateOpeningBalanceCommand(
     string BatchNumber,
     DateOnly? ExpiryDate,
     decimal PurchasePrice,
-    decimal Quantity) : IRequest<Guid>;
+    decimal Quantity,
+    Pharmacy.Domain.Catalog.SaleUnit Unit = Pharmacy.Domain.Catalog.SaleUnit.Box,
+    Guid? Id = null) : IRequest<Guid>;

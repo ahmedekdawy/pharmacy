@@ -1,0 +1,199 @@
+<section class="page">
+  <header class="head">
+    <h1>{{ pick('Opening stock count', 'رصيد أول المدة') }}</h1>
+    <div class="tabs">
+      <button type="button" [class.on]="tab() === 'count'" (click)="tab.set('count')">{{ pick('Count', 'الحصر') }}</button>
+      <button type="button" [class.on]="tab() === 'review'" (click)="loadReview()">{{ pick('Review & print', 'المراجعة والطباعة') }}</button>
+    </div>
+  </header>
+
+  <div class="bar">
+    <select [value]="locationId()" (change)="setLocation($any($event.target).value)" [attr.aria-label]="pick('Branch', 'الفرع')">
+      @for (l of sync.locations(); track l.id) {
+        <option [value]="l.id" [selected]="l.id === locationId()">{{ name(l) }}</option>
+      }
+    </select>
+    <label class="margin">
+      {{ pick('Default margin %', 'نسبة الربح الافتراضية %') }}
+      <input type="number" min="0" max="90" step="1" [value]="margin() ?? ''" (change)="setMargin($any($event.target).value)"
+        [title]="pick('Used to pre-fill the cost from the selling price', 'تُستخدم لحساب التكلفة تلقائياً من سعر البيع')" />
+    </label>
+    <span class="net" [class.off]="!sync.online()">{{ sync.online() ? pick('Online', 'متصل') : pick('Offline – saved on device', 'بدون إنترنت – يُحفظ على الجهاز') }}</span>
+  </div>
+
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (message()) { <p class="ok">{{ message() }}</p> }
+
+  @if (tab() === 'count') {
+    <!-- ============ step 1: scan ============ -->
+    @if (step() === 'scan') {
+      <div class="scan">
+        <input
+          #scanBox
+          autofocus
+          autocomplete="off"
+          [value]="scanText()"
+          (input)="scanText.set($any($event.target).value)"
+          (keydown.enter)="onScanEnter()"
+          [placeholder]="pick('Scan barcode (or type name / code) then Enter', 'امسح الباركود (أو اكتب الاسم / الكود) ثم Enter')"
+        />
+        @if (cameraSupported()) {
+          <button type="button" class="btn primary cam" (click)="cameraOpen.set(true)">📷 {{ pick('Camera', 'الكاميرا') }}</button>
+        }
+      </div>
+      @if (busy()) { <p class="hint">{{ pick('Looking up…', 'جاري البحث…') }}</p> }
+      @if (nameResults().length) {
+        <ul class="results">
+          @for (p of nameResults(); track p.id) {
+            <li><button type="button" (click)="choose(p)"><strong>{{ name(p) }}</strong><small>{{ p.code }} · {{ stockText(p) }}</small></button></li>
+          }
+        </ul>
+      }
+      <p class="hint">
+        {{ pick('Tip: the square code (DataMatrix) on the box also fills the batch and expiry automatically.', 'نصيحة: الكود المربع (DataMatrix) على العلبة يملأ التشغيلة وتاريخ الصلاحية تلقائياً.') }}
+      </p>
+    }
+
+    <!-- ============ step 2: new product ============ -->
+    @if (step() === 'new') {
+      <form class="card" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+        <h2>{{ pick('New item', 'صنف جديد') }}</h2>
+        @if (sourceNote()) { <p class="note">{{ sourceNote() }}</p> }
+
+        @if (sync.online()) {
+          <label class="full">
+            {{ pick('Search Egyptian drug list (fills name & price)', 'ابحث في قائمة الأدوية المصرية (يملأ الاسم والسعر)') }}
+            <input type="search" (input)="searchCatalog($any($event.target).value)" [placeholder]="pick('e.g. Panadol', 'مثال: بنادول')" />
+          </label>
+          @if (catalogResults().length) {
+            <ul class="results full">
+              @for (d of catalogResults(); track $index) {
+                <li><button type="button" (click)="pickCatalog(d)">
+                  <strong>{{ lang() === 'ar' ? d.commercialNameAr || d.commercialNameEn : d.commercialNameEn }}</strong>
+                  <small>{{ d.scientificName }} · {{ d.manufacturer }} · {{ d.priceEgp | number: '1.2-2' }}</small>
+                </button></li>
+              }
+            </ul>
+          }
+        }
+
+        <label>{{ pick('Barcode', 'الباركود') }}<input formControlName="barcode" /></label>
+        <label>{{ pick('Code', 'الكود') }}<input formControlName="code" /></label>
+        <label>{{ pick('Arabic name', 'الاسم عربي') }}<input formControlName="nameAr" /></label>
+        <label>{{ pick('English name', 'الاسم إنجليزي') }}<input formControlName="nameEn" /></label>
+        <label>{{ pick('Box price', 'سعر العلبة') }}<input formControlName="sellingPrice" type="number" min="0" step="0.25" inputmode="decimal" /></label>
+        <label>{{ pick('Strips per box', 'شرائط في العلبة') }}<input formControlName="stripsPerBox" type="number" min="1" step="1" inputmode="numeric" /></label>
+        <label>{{ pick('Pills per strip', 'حبات في الشريط') }}<input formControlName="unitsPerStrip" type="number" min="1" step="1" inputmode="numeric" /></label>
+        <label class="check"><input type="checkbox" formControlName="allowStripSale" /> {{ pick('Sell by strip', 'بيع بالشريط') }}</label>
+        <label class="check"><input type="checkbox" formControlName="allowUnitSale" /> {{ pick('Sell by pill', 'بيع بالحبة') }}</label>
+        <label>{{ pick('Active ingredient', 'المادة الفعالة') }}<input formControlName="scientificName" /></label>
+        <label>{{ pick('Manufacturer', 'الشركة') }}<input formControlName="manufacturer" /></label>
+
+        <div class="actions full">
+          <button type="button" class="btn" (click)="cancel()">{{ pick('Cancel', 'إلغاء') }}</button>
+          <button type="submit" class="btn primary" [disabled]="busy()">{{ pick('Save item & count', 'حفظ الصنف والعد') }}</button>
+        </div>
+      </form>
+    }
+
+    <!-- ============ step 3: count ============ -->
+    @if (step() === 'count' && current(); as p) {
+      <form class="card" [formGroup]="countForm" (ngSubmit)="saveCount()">
+        <h2>{{ name(p) }}</h2>
+        <p class="note">
+          @if (sourceNote()) { {{ sourceNote() }} · }
+          {{ p.code }} · {{ p.stripsPerBox }}×{{ p.unitsPerStrip }} · {{ pick('Price', 'السعر') }} {{ p.sellingPrice | number: '1.2-2' }}
+          @if (p.stock) { · {{ pick('Already counted', 'معدود سابقاً') }}: {{ stockText(p) }} }
+        </p>
+
+        <div class="qty full">
+          <label>{{ pick('Boxes', 'علب') }}<input formControlName="boxes" type="number" min="0" step="1" inputmode="numeric" autofocus /></label>
+          @if (p.stripsPerBox > 1) {
+            <label>{{ pick('Loose strips', 'شرائط فرط') }}<input formControlName="strips" type="number" min="0" step="1" inputmode="numeric" /></label>
+          }
+          @if (p.unitsPerStrip > 1 || p.stripsPerBox > 1) {
+            <label>{{ pick('Loose pills', 'حبات فرط') }}<input formControlName="pills" type="number" min="0" step="1" inputmode="numeric" /></label>
+          }
+        </div>
+
+        <label>{{ pick('Batch', 'التشغيلة') }}<input formControlName="batch" /></label>
+        <label>{{ pick('Expiry', 'الصلاحية') }}<input formControlName="expiry" type="date" /></label>
+        <label>{{ pick('Cost per box', 'تكلفة العلبة') }}<input formControlName="costPerBox" type="number" min="0" step="0.25" inputmode="decimal" /></label>
+
+        <p class="summary full">{{ countSummary() }}</p>
+
+        <div class="actions full">
+          <button type="button" class="btn" (click)="cancel()">{{ pick('Cancel', 'إلغاء') }}</button>
+          <button type="submit" class="btn primary" [disabled]="busy()">{{ pick('Save count', 'حفظ الرصيد') }}</button>
+        </div>
+      </form>
+    }
+
+    <!-- ============ this device's session ============ -->
+    <section class="session">
+      <header class="head">
+        <h2>{{ pick('Counted on this device', 'تم حصره على هذا الجهاز') }} ({{ sessionTotals().lines }})</h2>
+        @if (session().length) { <button type="button" class="link" (click)="clearSession()">{{ pick('Clear list', 'مسح القائمة') }}</button> }
+      </header>
+      <ul class="lines">
+        @for (l of session(); track l.id) {
+          <li>
+            <div>
+              <strong>{{ l.name }}</strong>
+              <small>
+                {{ l.boxes }} {{ pick('box', 'علبة') }}
+                @if (l.strips) { + {{ l.strips }} {{ pick('strip', 'شريط') }} }
+                @if (l.pills) { + {{ l.pills }} {{ pick('pill', 'حبة') }} }
+                · {{ l.batch }} @if (l.expiry) { · {{ l.expiry }} }
+              </small>
+            </div>
+            <span class="tag" [class.pending]="l.queued">{{ l.queued ? pick('on device', 'على الجهاز') : pick('saved', 'محفوظ') }}</span>
+          </li>
+        } @empty {
+          <li class="hint">{{ pick('Nothing counted yet.', 'لم يتم حصر أي صنف بعد.') }}</li>
+        }
+      </ul>
+    </section>
+  } @else {
+    <!-- ============ review ============ -->
+    @if (review(); as rows) {
+      <div class="cards">
+        <div class="kpi"><span>{{ pick('Items', 'الأصناف') }}</span><b>{{ reviewTotals().items }}</b></div>
+        <div class="kpi"><span>{{ pick('Total cost', 'إجمالي التكلفة') }}</span><b>{{ reviewTotals().cost | number: '1.2-2' }}</b></div>
+        <div class="kpi"><span>{{ pick('Total sale value', 'إجمالي قيمة البيع') }}</span><b>{{ reviewTotals().selling | number: '1.2-2' }}</b></div>
+        <button type="button" class="btn primary" (click)="printReview()">{{ pick('Print', 'طباعة') }}</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>{{ pick('Item', 'الصنف') }}</th><th>{{ pick('Batch', 'التشغيلة') }}</th><th>{{ pick('Expiry', 'الصلاحية') }}</th>
+            <th class="num">{{ pick('Boxes', 'علب') }}</th><th class="num">{{ pick('Cost', 'التكلفة') }}</th><th>{{ pick('Entered', 'تاريخ الإدخال') }}</th>
+          </tr></thead>
+          <tbody>
+            @for (r of rows; track r.id) {
+              <tr>
+                <td>{{ lang() === 'ar' ? r.productNameAr : r.productNameEn }}<small> {{ r.productCode }}</small></td>
+                <td>{{ r.batchNumber }}</td>
+                <td>{{ r.expiryDate }}</td>
+                <td class="num">{{ r.baseQuantity / r.unitsPerBox | number: '1.0-2' }}</td>
+                <td class="num">{{ r.costValue | number: '1.2-2' }}</td>
+                <td>{{ r.createdAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="hint">{{ pick('No opening stock entered yet.', 'لم يتم إدخال رصيد أول مدة بعد.') }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (sync.pendingCount()) {
+        <p class="hint">{{ sync.pendingCount() }} {{ pick('line(s) still on this device are not included until they upload.', 'سطر ما زال على الجهاز ولن يظهر هنا حتى يتم رفعه.') }}</p>
+      }
+    } @else if (!error()) {
+      <p class="hint">{{ pick('Loading…', 'جاري التحميل…') }}</p>
+    }
+  }
+
+  @if (cameraOpen()) {
+    <app-barcode-scanner (scanned)="onCameraScan($event)" (closed)="cameraOpen.set(false)" />
+  }
+</section>

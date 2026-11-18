@@ -23,6 +23,12 @@ public static class DependencyInjection
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IEgyptianDrugCatalog, EgyptianDrugCatalog>();
+        services.AddScoped<IExternalDrugLookup, HttpExternalDrugLookup>();
+        services.AddHttpClient(nameof(HttpExternalDrugLookup), client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(8);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("PharmacyApp/1.0");
+        });
         services.AddHttpClient(nameof(EgyptianDrugCatalog), client =>
         {
             client.Timeout = TimeSpan.FromMinutes(2);

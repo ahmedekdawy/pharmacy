@@ -42,6 +42,13 @@ public sealed class InventoryController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken = default)
         => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetLowStockQuery(threshold), cancellationToken)));
 
+    [HttpGet("opening-balance")]
+    [RequirePermission(PermissionCodes.InventoryView)]
+    public async Task<ActionResult<ApiResponse<object>>> OpeningBalances(
+        [FromQuery] Guid? locationId,
+        CancellationToken cancellationToken)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetOpeningBalancesQuery(locationId), cancellationToken)));
+
     [HttpPost("opening-balance")]
     [RequirePermission(PermissionCodes.InventoryAdjust)]
     public async Task<ActionResult<ApiResponse<object>>> OpeningBalance(

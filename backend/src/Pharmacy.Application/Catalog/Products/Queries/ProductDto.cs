@@ -9,4 +9,10 @@ public sealed record ProductDto(
     Guid? CategoryId,
     Guid? BrandId,
     decimal SellingPrice,
-    bool IsActive);
+    bool IsActive,
+    int StripsPerBox,
+    int UnitsPerStrip,
+    bool AllowStripSale,
+    bool AllowUnitSale,
+    decimal? StripPrice,
+    decimal? UnitPrice);

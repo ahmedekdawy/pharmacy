@@ -22,10 +22,12 @@ public interface IPharmacyDbContext
     DbSet<Category> Categories { get; }
     DbSet<Brand> Brands { get; }
     DbSet<Product> Products { get; }
+    DbSet<DrugBarcode> DrugBarcodes { get; }
     DbSet<ProductBatch> ProductBatches { get; }
     DbSet<InventoryTransaction> InventoryTransactions { get; }
     DbSet<Supplier> Suppliers { get; }
     DbSet<Customer> Customers { get; }
+    DbSet<CustomerPayment> CustomerPayments { get; }
     DbSet<Purchase> Purchases { get; }
     DbSet<PurchaseItem> PurchaseItems { get; }
     DbSet<Sale> Sales { get; }
@@ -45,4 +47,7 @@ public interface IPharmacyDbContext
     DbSet<AuditLog> AuditLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Detach all tracked entities (used to isolate failed operations during batch sync).</summary>
+    void ClearChanges();
 }

@@ -23,6 +23,15 @@ public sealed class ReportsController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken)
         => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetSalesReportQuery(from, to), cancellationToken)));
 
+    [HttpGet("daily")]
+    [RequirePermission(PermissionCodes.ReportSales)]
+    public async Task<ActionResult<ApiResponse<object>>> Daily(
+        [FromQuery] DateOnly? date,
+        [FromQuery] Guid? locationId,
+        [FromQuery] int utcOffsetMinutes = 120,
+        CancellationToken cancellationToken = default)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetDailyReportQuery(date, locationId, utcOffsetMinutes), cancellationToken)));
+
     [HttpGet("profit")]
     [RequirePermission(PermissionCodes.ReportProfit)]
     public async Task<ActionResult<ApiResponse<object>>> Profit(

@@ -23,6 +23,60 @@ public static class IdentityDataSeeder
         await SeedPermissionsAsync(db, cancellationToken);
         await SeedPagesAsync(db, cancellationToken);
         await SeedDemoTenantAsync(db, passwords, logger, cancellationToken);
+        await GrantAllToOwnerRolesAsync(db, cancellationToken);
+    }
+
+    /// <summary>Owner roles of every tenant always get newly introduced permissions and pages (e.g. POS, debts).</summary>
+    private static async Task GrantAllToOwnerRolesAsync(PharmacyDbContext db, CancellationToken cancellationToken)
+    {
+        var owners = await db.Roles.IgnoreQueryFilters()
+            .Where(x => x.Code == "Owner" && !x.IsDeleted)
+            .ToListAsync(cancellationToken);
+        if (owners.Count == 0) return;
+
+        var permissions = await db.Permissions.IgnoreQueryFilters().Where(x => x.IsActive).Select(x => x.Id).ToListAsync(cancellationToken);
+        var pages = await db.Pages.IgnoreQueryFilters().Where(x => x.IsActive).Select(x => x.Id).ToListAsync(cancellationToken);
+        var ownerIds = owners.Select(x => x.Id).ToList();
+
+        var existingPermissions = (await db.RolePermissions.IgnoreQueryFilters()
+                .Where(x => ownerIds.Contains(x.RoleId))
+                .Select(x => new { x.RoleId, x.PermissionId })
+                .ToListAsync(cancellationToken))
+            .Select(x => (x.RoleId, x.PermissionId))
+            .ToHashSet();
+        var existingPages = (await db.RolePages.IgnoreQueryFilters()
+                .Where(x => ownerIds.Contains(x.RoleId))
+                .Select(x => new { x.RoleId, x.PageId })
+                .ToListAsync(cancellationToken))
+            .Select(x => (x.RoleId, x.PageId))
+            .ToHashSet();
+
+        foreach (var role in owners)
+        {
+            foreach (var permissionId in permissions.Where(p => !existingPermissions.Contains((role.Id, p))))
+            {
+                db.RolePermissions.Add(new RolePermission
+                {
+                    TenantId = role.TenantId,
+                    RoleId = role.Id,
+                    PermissionId = permissionId,
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
+            }
+
+            foreach (var pageId in pages.Where(p => !existingPages.Contains((role.Id, p))))
+            {
+                db.RolePages.Add(new RolePage
+                {
+                    TenantId = role.TenantId,
+                    RoleId = role.Id,
+                    PageId = pageId,
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task SeedPermissionsAsync(PharmacyDbContext db, CancellationToken cancellationToken)
@@ -56,6 +110,7 @@ public static class IdentityDataSeeder
             (PermissionCodes.PurchaseReceive, "Purchasing", "Receive purchases", "استلام المشتريات"),
             (PermissionCodes.CustomerView, "Customers", "View customers", "عرض العملاء"),
             (PermissionCodes.CustomerManage, "Customers", "Manage customers", "إدارة العملاء"),
+            (PermissionCodes.CustomerPayment, "Customers", "Collect customer payments", "تحصيل مديونيات العملاء"),
             (PermissionCodes.SaleView, "Sales", "View sales", "عرض المبيعات"),
             (PermissionCodes.SaleCreate, "Sales", "Create sales", "إنشاء المبيعات"),
             (PermissionCodes.SaleReturn, "Sales", "Return sales", "مرتجع المبيعات"),
@@ -108,7 +163,11 @@ public static class IdentityDataSeeder
             ("audit", "/app/audit", "Audit Logs", "سجل التدقيق", 15),
             ("settings", "/app/settings", "Settings", "الإعدادات", 16),
             ("users", "/app/users", "Users", "المستخدمون", 17),
-            ("roles", "/app/roles", "Roles", "الأدوار", 18)
+            ("roles", "/app/roles", "Roles", "الأدوار", 18),
+            ("pos", "/app/pos", "Point of Sale", "نقطة البيع", 0),
+            ("daily-report", "/app/daily-report", "Daily Invoice", "اليومية", 15),
+            ("debts", "/app/debts", "Customer Debts", "المديونيات", 10),
+            ("opening-stock", "/app/opening-stock", "Opening Stock Count", "رصيد أول المدة", 6)
         };
 
         var existing = await db.Pages.IgnoreQueryFilters().Select(x => x.Code).ToListAsync(cancellationToken);

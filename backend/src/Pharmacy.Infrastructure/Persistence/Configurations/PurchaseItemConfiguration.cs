@@ -18,6 +18,7 @@ public sealed class PurchaseItemConfiguration : IEntityTypeConfiguration<Purchas
         builder.Property(x => x.BatchNumber).HasColumnName("batch_number").HasMaxLength(128).IsRequired();
         builder.Property(x => x.ExpiryDate).HasColumnName("expiry_date");
         builder.Property(x => x.Quantity).HasColumnName("quantity").HasPrecision(18, 4);
+        builder.Property(x => x.BaseQuantity).HasColumnName("base_quantity").HasPrecision(18, 4);
         builder.Property(x => x.UnitCost).HasColumnName("unit_cost").HasPrecision(18, 4);
         builder.Property(x => x.LineTotal).HasColumnName("line_total").HasPrecision(18, 4);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
