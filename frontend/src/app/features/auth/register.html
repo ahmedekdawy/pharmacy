@@ -1,0 +1,45 @@
+<section class="register">
+  <a routerLink="/" class="brand">{{ t('BRAND.NAME') }}</a>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <h1>Register your pharmacy</h1>
+    <label>
+      Pharmacy Name (English)
+      <input formControlName="tenantNameEn" autocomplete="organization" />
+    </label>
+    <label>
+      Pharmacy Name (Arabic)
+      <input formControlName="tenantNameAr" dir="rtl" />
+    </label>
+    <label>
+      Tenant Code
+      <input formControlName="tenantCode" autocomplete="off" />
+    </label>
+    <label>
+      Admin Full Name (English)
+      <input formControlName="adminFullNameEn" autocomplete="name" />
+    </label>
+    <label>
+      Admin Full Name (Arabic)
+      <input formControlName="adminFullNameAr" dir="rtl" />
+    </label>
+    <label>
+      Admin Email
+      <input type="email" formControlName="adminEmail" autocomplete="username" />
+    </label>
+    <label>
+      Admin Password
+      <input type="password" formControlName="adminPassword" autocomplete="new-password" />
+    </label>
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+    <app-icon-button
+      icon="login"
+      type="submit"
+      tone="primary"
+      [disabled]="loading()"
+      label="Create pharmacy"
+    ></app-icon-button>
+    <p class="switch">Already have an account? <a routerLink="/login">Log in</a></p>
+  </form>
+</section>

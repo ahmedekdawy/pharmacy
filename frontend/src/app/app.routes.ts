@@ -4,11 +4,15 @@ import { authGuard, permissionGuard } from './core/guards/auth.guard';
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./features/landing/landing').then((m) => m.Landing)
+    loadComponent: () => import('./features/landing/hagar-landing').then((m) => m.HagarLanding)
   },
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login').then((m) => m.Login)
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./features/auth/register').then((m) => m.Register)
   },
   {
     path: 'contact',

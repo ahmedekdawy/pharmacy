@@ -1,0 +1,42 @@
+<section class="hero">
+  <header class="top">
+    <a routerLink="/" class="brand">
+      <img [src]="logoUrl" alt="" class="logo" />
+      <span class="brand-text">
+        {{ copy.brand }}
+        <span class="tagline">{{ copy.tagline }}</span>
+      </span>
+    </a>
+    <div class="actions">
+      <button type="button" class="lang" (click)="setLang('en')">EN</button>
+      <button type="button" class="lang" (click)="setLang('ar')">AR</button>
+      <a routerLink="/login">{{ copy.loginLabel }}</a>
+    </div>
+  </header>
+
+  <div class="hero-banner">
+    <img [src]="bannerUrl" [alt]="copy.brand" />
+  </div>
+
+  <div class="hero-copy">
+    <h1>{{ copy.headline }}</h1>
+    <p>{{ copy.subtitle }}</p>
+    <div class="cta">
+      <a class="primary" routerLink="/login">{{ copy.ctaLogin }}</a>
+      <a class="whatsapp" [href]="whatsAppLink" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="whatsapp-icon">
+          <path
+            fill="currentColor"
+            d="M17.47 14.38c-.3-.15-1.74-.86-2.01-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.48-1.76-1.66-2.06-.17-.3-.02-.46.13-.61.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.6-.91-2.2-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.06 2.87 1.21 3.07c.15.2 2.09 3.18 5.06 4.46.71.3 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.74-.71 1.99-1.4.25-.68.25-1.27.17-1.4-.07-.12-.27-.2-.57-.35z"
+          />
+          <path
+            fill="currentColor"
+            d="M12.02 2C6.5 2 2 6.48 2 12c0 1.86.5 3.6 1.38 5.1L2 22l5.05-1.32A9.96 9.96 0 0 0 12.02 22C17.53 22 22 17.52 22 12S17.53 2 12.02 2zm0 18.17c-1.67 0-3.22-.46-4.55-1.26l-.33-.2-3 .78.8-2.92-.21-.3A8.15 8.15 0 0 1 3.83 12c0-4.52 3.68-8.17 8.19-8.17 4.5 0 8.16 3.65 8.16 8.17 0 4.52-3.66 8.17-8.16 8.17z"
+          />
+        </svg>
+        {{ copy.ctaWhatsApp }}
+      </a>
+      <a class="secondary" routerLink="/contact">{{ copy.ctaContact }}</a>
+    </div>
+  </div>
+</section>

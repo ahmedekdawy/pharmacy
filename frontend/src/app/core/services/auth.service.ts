@@ -28,6 +28,16 @@ export interface LoginResult {
   pages: PageAccess[];
 }
 
+export interface RegisterTenantPayload {
+  tenantCode: string;
+  tenantNameEn: string;
+  tenantNameAr: string;
+  adminFullNameEn: string;
+  adminFullNameAr: string;
+  adminEmail: string;
+  adminPassword: string;
+}
+
 interface ApiResponse<T> {
   data: T;
   success: boolean;
@@ -60,6 +70,19 @@ export class AuthService {
         tap((res) => {
           if (!res.success || !res.data) {
             throw new Error(res.errors?.[0] ?? 'Login failed');
+          }
+          this.persist(res.data);
+        })
+      );
+  }
+
+  registerTenant(payload: RegisterTenantPayload): Observable<ApiResponse<LoginResult>> {
+    return this.http
+      .post<ApiResponse<LoginResult>>(`${environment.apiBaseUrl}/auth/register-tenant`, payload)
+      .pipe(
+        tap((res) => {
+          if (!res.success || !res.data) {
+            throw new Error(res.errors?.[0] ?? 'Registration failed');
           }
           this.persist(res.data);
         })
