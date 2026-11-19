@@ -1,20 +1,23 @@
 <section class="login">
   <a routerLink="/" class="brand">{{ t('BRAND.NAME') }}</a>
-  <form [formGroup]="form" (ngSubmit)="submit()">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <label>
-      Tenant Code
+      Tenant Code *
       <input formControlName="tenantCode" autocomplete="organization" />
+      <app-field-error [control]="form.controls.tenantCode" label="Tenant code" />
     </label>
     <label>
-      Email or Mobile
+      Email or Mobile *
       <input type="text" formControlName="identifier" autocomplete="username" />
+      <app-field-error [control]="form.controls.identifier" label="Email or mobile" />
     </label>
     <label>
-      Password
+      Password *
       <input type="password" formControlName="password" autocomplete="current-password" />
+      <app-field-error [control]="form.controls.password" label="Password" />
     </label>
     @if (error()) {
-      <p class="error">{{ error() }}</p>
+      <p class="error" role="alert">{{ error() }}</p>
     }
     <app-icon-button icon="login" type="submit" tone="primary" [disabled]="loading()" [label]="t('LANDING.LOGIN')"></app-icon-button>
   </form>

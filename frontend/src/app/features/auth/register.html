@@ -1,41 +1,49 @@
 <section class="register">
   <a routerLink="/" class="brand">{{ t('BRAND.NAME') }}</a>
-  <form [formGroup]="form" (ngSubmit)="submit()">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <h1>Register your pharmacy</h1>
     <label>
-      Pharmacy Name (English)
+      Pharmacy Name (English) *
       <input formControlName="tenantNameEn" autocomplete="organization" />
+      <app-field-error [control]="form.controls.tenantNameEn" label="Pharmacy name (English)" />
     </label>
     <label>
-      Pharmacy Name (Arabic)
+      Pharmacy Name (Arabic) *
       <input formControlName="tenantNameAr" dir="rtl" />
+      <app-field-error [control]="form.controls.tenantNameAr" label="Pharmacy name (Arabic)" />
     </label>
     <label>
-      Tenant Code
+      Tenant Code *
       <input formControlName="tenantCode" autocomplete="off" />
+      <app-field-error [control]="form.controls.tenantCode" label="Tenant code" />
     </label>
     <label>
-      Admin Full Name (English)
+      Admin Full Name (English) *
       <input formControlName="adminFullNameEn" autocomplete="name" />
+      <app-field-error [control]="form.controls.adminFullNameEn" label="Admin full name (English)" />
     </label>
     <label>
-      Admin Full Name (Arabic)
+      Admin Full Name (Arabic) *
       <input formControlName="adminFullNameAr" dir="rtl" />
+      <app-field-error [control]="form.controls.adminFullNameAr" label="Admin full name (Arabic)" />
     </label>
     <label>
-      Admin Email
+      Admin Email *
       <input type="email" formControlName="adminEmail" autocomplete="username" />
+      <app-field-error [control]="form.controls.adminEmail" label="Admin email" />
     </label>
     <label>
       Admin Mobile (optional, lets the admin also log in by mobile)
       <input type="tel" formControlName="adminPhoneNumber" autocomplete="tel" />
+      <app-field-error [control]="form.controls.adminPhoneNumber" label="Admin mobile" />
     </label>
     <label>
-      Admin Password
+      Admin Password *
       <input type="password" formControlName="adminPassword" autocomplete="new-password" />
+      <app-field-error [control]="form.controls.adminPassword" label="Admin password" />
     </label>
     @if (error()) {
-      <p class="error">{{ error() }}</p>
+      <p class="error" role="alert">{{ error() }}</p>
     }
     <app-icon-button
       icon="login"

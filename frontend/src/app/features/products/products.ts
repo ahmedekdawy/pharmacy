@@ -8,6 +8,7 @@ import { ApiResponse, ApiService, ProductDto } from '../../core/services/api.ser
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 export interface EgyptianDrug {
   commercialNameEn: string;
@@ -217,7 +218,7 @@ export class Products implements OnInit, OnDestroy {
           this.clearForm();
           this.reload();
         },
-        error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Update product failed.')
+        error: (err) => this.error.set(apiErrorMessage(err, 'Update product failed.'))
       });
       return;
     }
@@ -227,7 +228,7 @@ export class Products implements OnInit, OnDestroy {
         this.clearForm();
         this.reload();
       },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Create product failed.')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Create product failed.'))
     });
   }
 
@@ -243,7 +244,7 @@ export class Products implements OnInit, OnDestroy {
         }
         this.reload();
       },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete product failed.')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Delete product failed.'))
     });
   }
 }

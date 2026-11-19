@@ -7,6 +7,7 @@ import { LocalizationService } from '../../core/services/localization.service';
 import { SyncService } from '../../core/offline/sync.service';
 import { PaymentMethod, PosCustomer, newId, round2 } from '../../core/offline/models';
 import { escapeHtml, money, printHtml } from '../../core/offline/print';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface StatementLine { date: string; type: 'Sale' | 'Payment' | 'Return'; reference: string; debit: number; credit: number; balance: number; notes?: string | null; }
@@ -231,7 +232,7 @@ export class DebtsPage implements OnInit {
     this.error.set(null);
     this.http.get<ApiResponse<Statement>>(`${environment.apiBaseUrl}/customers/${c.id}/statement`).subscribe({
       next: (res) => this.statement.set(res.data),
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? this.pick('Unable to load statement.', 'تعذر تحميل كشف الحساب.'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.pick('Unable to load statement.', 'تعذر تحميل كشف الحساب.')))
     });
   }
 

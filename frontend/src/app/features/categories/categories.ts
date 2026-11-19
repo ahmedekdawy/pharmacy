@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface NamedDto { id: string; nameEn: string; nameAr: string; isActive: boolean; }
@@ -56,7 +57,7 @@ export class CategoriesPage implements OnInit {
       : this.http.post(`${environment.apiBaseUrl}/categories`, body);
     req$.subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Save failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
     });
   }
 
@@ -64,7 +65,7 @@ export class CategoriesPage implements OnInit {
     if (!confirm(`Delete ${item.nameEn}?`)) return;
     this.http.delete(`${environment.apiBaseUrl}/categories/${item.id}`).subscribe({
       next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
     });
   }
 }

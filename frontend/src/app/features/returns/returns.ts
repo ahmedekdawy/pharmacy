@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface SaleDto { id: string; number: string; locationNameEn: string; totalAmount: number; }
@@ -95,7 +96,7 @@ export class ReturnsPage implements OnInit {
     const id = this.form.getRawValue().saleId!;
     this.http.get<ApiResponse<SaleDetail>>(`${environment.apiBaseUrl}/sales/${id}`).subscribe({
       next: (res) => this.detail.set(res.data),
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Load failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Load failed'))
     });
   }
 
@@ -110,7 +111,7 @@ export class ReturnsPage implements OnInit {
       items: [{ saleItemId: item.id, quantity: qty }]
     }).subscribe({
       next: () => { this.loadSale(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Return failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Return failed'))
     });
   }
 }

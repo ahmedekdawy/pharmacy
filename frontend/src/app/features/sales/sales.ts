@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { LocalReceipt, PaymentMethod, SaleUnit } from '../../core/offline/models';
 import { printHtml, receiptHtml } from '../../core/offline/print';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface SaleDto {
@@ -122,7 +123,7 @@ export class SalesPage implements OnInit {
         };
         printHtml(receiptHtml(receipt, this.lang(), this.auth.user()?.tenantCode ?? ''), { title: d.number, dir: ar ? 'rtl' : 'ltr' });
       },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Error')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Error'))
     });
   }
 }

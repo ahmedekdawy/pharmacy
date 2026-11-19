@@ -61,3 +61,11 @@ button:disabled {
   margin: 0;
   color: #c45c4a;
 }
+
+input.ng-invalid.ng-touched {
+  border-color: #c45c4a;
+}
+
+.error {
+  white-space: pre-line;
+}

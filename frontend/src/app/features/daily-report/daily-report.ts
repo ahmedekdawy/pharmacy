@@ -7,6 +7,7 @@ import { LocalizationService } from '../../core/services/localization.service';
 import { SyncService } from '../../core/offline/sync.service';
 import { LocalReceipt, SaleUnit, round2, unitLabel } from '../../core/offline/models';
 import { escapeHtml, money, printHtml, receiptHtml } from '../../core/offline/print';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 
@@ -211,7 +212,7 @@ export class DailyReportPage implements OnInit {
         this.error.set(
           err?.status === 0
             ? this.pick('No internet connection – showing invoices saved on this device only.', 'لا يوجد اتصال – يتم عرض فواتير هذا الجهاز فقط.')
-            : err?.error?.errors?.[0] ?? this.pick('Unable to load the report.', 'تعذر تحميل التقرير.')
+            : apiErrorMessage(err, this.pick('Unable to load the report.', 'تعذر تحميل التقرير.'))
         );
       }
     });
