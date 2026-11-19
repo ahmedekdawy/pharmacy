@@ -3,9 +3,11 @@ using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pharmacy.Application.Common;
 using Pharmacy.Application.Common.Interfaces;
 using Pharmacy.Application.Catalog.Products.Commands.CreateProduct;
 using Pharmacy.Application.Customers;
+using Pharmacy.Application.Inventory;
 using Pharmacy.Application.Inventory.Commands.CreateOpeningBalance;
 using Pharmacy.Application.Sales;
 using Pharmacy.Domain.Identity;
@@ -47,7 +49,10 @@ public sealed class GetSyncSnapshotQueryHandler(IPharmacyDbContext db, ICurrentT
     {
         if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
 
+        // Only sellable stock: expired batches must not let the POS think the item is available.
+        var today = PharmacyClock.Today();
         var stock = await db.ProductBatches.AsNoTracking()
+            .Where(x => x.ExpiryDate == null || x.ExpiryDate > today)
             .GroupBy(x => x.ProductId)
             .Select(g => new { g.Key, Qty = g.Sum(x => x.AvailableQuantity) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, cancellationToken);
@@ -85,6 +90,7 @@ public static class SyncOperationTypes
     public const string CustomerPaymentCreate = "customerPayment.create";
     public const string ProductCreate = "product.create";
     public const string OpeningBalanceCreate = "openingBalance.create";
+    public const string ShortageCreate = "shortage.create";
 }
 
 public sealed record SyncOperationInput(Guid OpId, string Type, JsonElement Payload);
@@ -186,6 +192,13 @@ public sealed class PushSyncCommandHandler(IPharmacyDbContext db, ISender sender
                 var command = Deserialize<CreateOpeningBalanceCommand>(op);
                 var id = await sender.Send(command, ct);
                 return new SyncOperationResult(op.OpId, "applied", id, null, [], null);
+            }
+            case SyncOperationTypes.ShortageCreate:
+            {
+                Require(request, PermissionCodes.ShortageCreate);
+                var command = Deserialize<CreateShortageCommand>(op);
+                var result = await sender.Send(command, ct);
+                return new SyncOperationResult(op.OpId, "applied", result.Id, null, [], null);
             }
             default:
                 throw new InvalidOperationException($"Unknown operation type '{op.Type}'.");

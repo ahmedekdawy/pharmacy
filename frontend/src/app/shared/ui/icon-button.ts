@@ -20,6 +20,7 @@ export type AppIcon =
       [class.danger]="tone === 'danger'"
       [class.success]="tone === 'success'"
       [class.primary]="tone === 'primary'"
+      [class.labeled]="showLabel"
       [disabled]="disabled"
       [attr.title]="title || label"
       [attr.aria-label]="label"
@@ -53,6 +54,7 @@ export type AppIcon =
           }
         }
       </svg>
+      @if (showLabel) { <span class="text">{{ label }}</span> }
     </button>
   `,
   styles: [`
@@ -76,6 +78,12 @@ export type AppIcon =
     .icon-action.primary:hover:not(:disabled) { background: var(--accent-strong); }
     .icon-action.success { color: var(--accent-strong); }
     .icon-action.danger { color: #c45c4a; }
+    .icon-action.labeled {
+      width: auto; min-width: max-content; height: auto; min-height: 2.5rem; padding: 0.45rem 1rem;
+      display: inline-flex; gap: 0.45rem; align-items: center; justify-content: center;
+      font: inherit; font-weight: 600; white-space: nowrap; line-height: 1.2;
+    }
+    .icon-action.labeled svg { flex-shrink: 0; }
   `]
 })
 export class IconButton {
@@ -85,5 +93,7 @@ export class IconButton {
   @Input() type: 'button' | 'submit' = 'button';
   @Input() tone: 'default' | 'primary' | 'danger' | 'success' = 'default';
   @Input() disabled = false;
+  /** Show the label as visible text next to the icon (for primary actions like Save). */
+  @Input() showLabel = false;
   readonly pressed = output<MouseEvent>();
 }

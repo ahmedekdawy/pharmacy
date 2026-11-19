@@ -76,11 +76,12 @@ public sealed class EgyptianDrugCatalog(IHttpClientFactory httpClientFactory, IL
 
     private static bool Matches(EgyptianDrugDto drug, string term)
     {
-        return Contains(drug.CommercialNameEn, term)
-            || Contains(drug.CommercialNameAr, term)
-            || Contains(drug.ScientificName, term)
-            || Contains(drug.Manufacturer, term)
-            || Contains(drug.DrugClass, term);
+        // Every word must appear somewhere, in any order:
+        // "panadol advance 48" matches "Panadol Advance 500 mg 48 f.c. tabs".
+        var haystack = string.Join(' ',
+            drug.CommercialNameEn, drug.CommercialNameAr, drug.ScientificName, drug.Manufacturer, drug.DrugClass);
+        var words = term.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.All(w => Contains(haystack, w));
     }
 
     private static bool Contains(string value, string term) =>

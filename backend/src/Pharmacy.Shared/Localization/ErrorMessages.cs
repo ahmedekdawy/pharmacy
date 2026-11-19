@@ -55,6 +55,12 @@ public static partial class ErrorMessages
         ["You cannot deactivate your own account."] = "لا يمكنك إيقاف حسابك.",
         ["You cannot delete your own account."] = "لا يمكنك حذف حسابك.",
         ["Could not be saved (conflict)."] = "تعذر الحفظ (تعارض في البيانات).",
+        ["Discount cannot exceed the invoice subtotal."] = "لا يمكن أن يتجاوز الخصم إجمالي الفاتورة.",
+        ["Invoice net total must be greater than zero."] = "يجب أن يكون صافي الفاتورة أكبر من صفر.",
+        ["Unit price must be greater than zero."] = "يجب أن يكون السعر أكبر من صفر.",
+        ["Shortage not found."] = "الصنف غير موجود في النواقص.",
+        ["Enter the item name or choose a product."] = "اكتب اسم الصنف أو اختر صنفاً من القائمة.",
+        ["Invalid shortage status."] = "حالة غير صحيحة.",
         ["Tenant header does not match token tenant."] = "الصيدلية المرسلة لا تطابق صيدلية المستخدم.",
         ["UnexpectedError"] = "حدث خطأ غير متوقع. حاول مرة أخرى.",
     };
@@ -72,6 +78,8 @@ public static partial class ErrorMessages
         (SoldByDisabledUnitRegex(), "${code}: تم البيع بال${unit} رغم أنها غير مفعّلة."),
         (StockShortRegex(), "${code}: عجز في المخزون بمقدار ${qty} وحدة."),
         (PaymentExceedsRegex(), "المبلغ المدفوع ${amount} أكبر من الرصيد المستحق ${balance}؛ سيصبح للعميل رصيد دائن."),
+        (OnlyExpiredStockRegex(), "المتاح من الصنف ${code} منتهي الصلاحية ولا يمكن بيعه."),
+        (SoldFromExpiredRegex(), "${code}: تم البيع من تشغيلة منتهية الصلاحية."),
     ];
 
     private static readonly Dictionary<string, string> ArabicUnits = new(StringComparer.OrdinalIgnoreCase)
@@ -145,6 +153,12 @@ public static partial class ErrorMessages
 
     [GeneratedRegex(@"^Payment (?<amount>[\d.]+) exceeds outstanding balance (?<balance>-?[\d.]+); the customer will have a credit\.$")]
     private static partial Regex PaymentExceedsRegex();
+
+    [GeneratedRegex(@"^Only expired stock is left for product (?<code>.+)\.$")]
+    private static partial Regex OnlyExpiredStockRegex();
+
+    [GeneratedRegex(@"^(?<code>.+): sold from an expired batch\.$")]
+    private static partial Regex SoldFromExpiredRegex();
 
     /// <summary>Localizes each message in a list (e.g. warnings returned to the client).</summary>
     public static IReadOnlyList<string> LocalizeAll(IEnumerable<string> messages) => messages.Select(m => Localize(m)).ToList();

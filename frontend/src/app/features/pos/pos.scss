@@ -150,3 +150,18 @@ button { cursor: pointer; }
 
 .search-row { display: flex; gap: .5rem; }
 .cam { border: 1px solid var(--border); background: var(--surface-muted); border-radius: .45rem; padding: 0 .9rem; font-size: 1.2rem; }
+
+.shortage-btn, .unit-buttons .shortage-btn {
+  border: 1px dashed #c98a2b; background: transparent; color: #8a4b08;
+  border-radius: .45rem; padding: .35rem .6rem; font: inherit; font-size: .82rem; cursor: pointer;
+  &:hover { background: rgba(217, 164, 65, .12); }
+}
+.hint .shortage-btn { margin-inline-start: .5rem; }
+.link-btn { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; font: inherit; cursor: pointer; }
+
+.toast {
+  position: fixed; inset-inline: 0; bottom: 1.25rem; margin-inline: auto; width: fit-content; max-width: calc(100% - 2rem);
+  background: #1f3d2f; color: #fff; padding: .7rem 1.1rem; border-radius: .6rem; z-index: 70;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+}
+@media (max-width: 900px) { .toast { bottom: 5rem; } }

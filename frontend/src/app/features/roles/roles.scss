@@ -75,3 +75,8 @@ li {
 .error {
   color: #c45c4a;
 }
+
+fieldset { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); align-items: start; }
+fieldset > legend { grid-column: 1 / -1; }
+.perm-group { display: grid; gap: 0.3rem; padding: 0.4rem 0; }
+.perm-group .module { font-size: 0.85rem; color: var(--muted); }

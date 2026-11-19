@@ -85,3 +85,24 @@ select.ng-invalid.ng-touched,
 textarea.ng-invalid.ng-touched {
   border-color: var(--danger);
 }
+
+input.invalid {
+  border-color: var(--danger);
+  outline-color: var(--danger);
+}
+
+/* Latin-only values (codes, barcodes, English names) stay left-to-right inside the Arabic UI. */
+input[dir='ltr'] {
+  text-align: start;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+
+.empty-state {
+  color: var(--muted);
+  padding: 1rem 0;
+  text-align: center;
+}

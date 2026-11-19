@@ -20,6 +20,7 @@ import {
 import { printHtml, receiptHtml } from '../../core/offline/print';
 import { barcodeCandidates, normalizeBarcode } from '../../core/offline/gs1';
 import { BarcodeScanner } from '../../shared/ui/barcode-scanner';
+import { ShortageQuickAdd } from '../shortages/shortage-quick-add';
 
 interface CartLine {
   key: string;
@@ -34,7 +35,7 @@ const LOCATION_KEY = 'pharmacy.pos_location';
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [DecimalPipe, BarcodeScanner],
+  imports: [DecimalPipe, BarcodeScanner, ShortageQuickAdd],
   templateUrl: './pos.html',
   styleUrl: './pos.scss'
 })
@@ -62,20 +63,25 @@ export class PosPage implements OnInit {
   readonly newCustomerPhone = signal('');
   readonly cartOpen = signal(false); // mobile bottom sheet
 
+  /** Shortage dialog: open with a catalog product, or with free text (item not in the catalog). */
+  readonly shortageDialog = signal<{ product: PosProduct | null; name: string } | null>(null);
+  readonly toast = signal<string | null>(null);
+  private toastTimer?: ReturnType<typeof setTimeout>;
+
   readonly lang = computed(() => this.i18n.language());
 
   readonly results = computed(() => {
     const term = this.query().trim().toLowerCase();
     const all = this.sync.products();
     if (!term) return [];
+    // Every word must match (any order): "panadol advance 48" finds "Panadol Advance 500mg 48".
+    const words = term.split(/\s+/);
     return all
-      .filter(
-        (p) =>
-          p.code.toLowerCase().includes(term) ||
-          p.nameEn.toLowerCase().includes(term) ||
-          p.nameAr.includes(term) ||
-          (p.barcode ?? '').toLowerCase() === term
-      )
+      .filter((p) => {
+        if ((p.barcode ?? '').toLowerCase() === term) return true;
+        const text = `${p.code} ${p.nameEn} ${p.nameAr}`.toLowerCase();
+        return words.every((w) => text.includes(w));
+      })
       .slice(0, 30);
   });
 
@@ -99,7 +105,7 @@ export class PosPage implements OnInit {
   );
 
   readonly subTotal = computed(() => round2(this.cart().reduce((s, l) => s + round2(l.price * l.qty), 0)));
-  readonly total = computed(() => round2(Math.max(0, this.subTotal() - Math.min(this.discount() || 0, this.subTotal()))));
+  readonly total = computed(() => round2(Math.max(0, this.subTotal() - Math.min(Math.max(0, this.discount() || 0), this.subTotal()))));
   readonly paid = computed(() => {
     const v = this.paidInput();
     return v === null ? this.total() : Math.min(Math.max(0, v), this.total());
@@ -118,6 +124,20 @@ export class PosPage implements OnInit {
       used.set(l.product.id, (used.get(l.product.id) ?? 0) + l.qty * unitFactor(l.product, l.unit));
     }
     return new Set([...used.entries()].filter(([id, qty]) => qty > (this.productById(id)?.stock ?? 0)).map(([id]) => id));
+  });
+
+  readonly discountTooHigh = computed(() => (this.discount() || 0) > this.subTotal());
+  readonly zeroPriceLines = computed(() => this.cart().some((l) => !(l.price > 0)));
+
+  /** Why the sale cannot be completed right now (null = OK). Shown next to the checkout button. */
+  readonly blocker = computed<string | null>(() => {
+    if (!this.cart().length) return null;
+    if (this.zeroPriceLines()) return this.pick('Every item needs a price greater than zero.', 'يجب أن يكون سعر كل صنف أكبر من صفر.');
+    if (this.discountTooHigh()) return this.pick('Discount cannot exceed the subtotal.', 'لا يمكن أن يتجاوز الخصم إجمالي الفاتورة.');
+    if (this.total() <= 0) return this.pick('The net total must be greater than zero.', 'يجب أن يكون صافي الفاتورة أكبر من صفر.');
+    // Offline the local stock may be stale, and offline shortages are accepted as warnings by design.
+    if (this.shortages().size && this.sync.online()) return this.pick('Some quantities exceed the available stock.', 'بعض الكميات أكبر من المتاح بالمخزن.');
+    return null;
   });
 
   readonly creditWarning = computed(() => {
@@ -231,12 +251,38 @@ export class PosPage implements OnInit {
     this.updateLine(line, { qty: Math.round(qty * 100) / 100 });
   }
 
+  /** Invalid prices (zero / negative) are kept as typed and block checkout with a message, instead of silently becoming 0. */
   setPrice(line: CartLine, price: number): void {
-    this.updateLine(line, { price: Math.max(0, price) });
+    this.updateLine(line, { price: round2(price) });
   }
 
   remove(line: CartLine): void {
     this.cart.update((lines) => lines.filter((l) => l.key !== line.key));
+  }
+
+  canAddShortage(): boolean {
+    return this.auth.hasPermission('Shortage.Create');
+  }
+
+  openShortage(product: PosProduct | null, name = ''): void {
+    this.shortageDialog.set({ product, name });
+  }
+
+  onShortageSaved(message: string): void {
+    this.shortageDialog.set(null);
+    this.showToast(message);
+    this.searchBox()?.nativeElement.focus();
+  }
+
+  closeShortage(): void {
+    this.shortageDialog.set(null);
+    this.searchBox()?.nativeElement.focus();
+  }
+
+  private showToast(message: string): void {
+    this.toast.set(message);
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toast.set(null), 3500);
   }
 
   selectCustomer(c: PosCustomer | null): void {
@@ -277,6 +323,11 @@ export class PosPage implements OnInit {
     const lines = this.cart();
     const location = this.sync.locations().find((l) => l.id === this.locationId());
     if (!lines.length) return;
+    const blocker = this.blocker();
+    if (blocker) {
+      this.error.set(blocker);
+      return;
+    }
     if (!location) {
       this.error.set(this.pick('Choose the branch first.', 'اختر الفرع أولاً.'));
       return;
@@ -288,7 +339,8 @@ export class PosPage implements OnInit {
 
     this.busy.set(true);
     const id = newId();
-    const number = this.sync.nextInvoiceNumber();
+    // Peek only: the sequence advances once the sale is accepted or queued, so rejected attempts leave no gaps.
+    const number = this.sync.peekInvoiceNumber();
     const soldAt = new Date().toISOString();
     const customer = this.customer();
     const payload = {
@@ -298,7 +350,7 @@ export class PosPage implements OnInit {
       locationId: location.id,
       customerId: customer?.id ?? null,
       notes: this.notes().trim() || null,
-      discountAmount: Math.min(this.discount() || 0, this.subTotal()),
+      discountAmount: Math.max(0, this.discount() || 0),
       paidAmount: this.paid(),
       paymentMethod: this.paymentMethod(),
       items: lines.map((l) => ({
@@ -318,6 +370,7 @@ export class PosPage implements OnInit {
         this.error.set(outcome.error);
         return;
       }
+      this.sync.commitInvoiceNumber(number);
 
       const receipt: LocalReceipt = {
         id,

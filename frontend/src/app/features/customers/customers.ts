@@ -22,11 +22,11 @@ interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string
       <form [formGroup]="form" (ngSubmit)="submit()">
         <label class="field">
           <span class="field-label">{{ i18n.pick('Code', 'الكود') }} <span class="req">*</span></span>
-          <input formControlName="code" [placeholder]="i18n.pick('Code', 'الكود')" />
+          <input formControlName="code" dir="ltr" [placeholder]="i18n.pick('Code', 'الكود')" />
         </label>
         <label class="field">
           <span class="field-label">{{ i18n.pick('Name (English)', 'الاسم (إنجليزي)') }} <span class="req">*</span></span>
-          <input formControlName="nameEn" [placeholder]="i18n.pick('Name in English', 'الاسم بالإنجليزية')" />
+          <input formControlName="nameEn" dir="ltr" [placeholder]="i18n.pick('Name in English', 'الاسم بالإنجليزية')" />
         </label>
         <label class="field">
           <span class="field-label">{{ i18n.pick('Name (Arabic)', 'الاسم (عربي)') }} <span class="req">*</span></span>
@@ -48,7 +48,7 @@ interface CustomerDto { id: string; code: string; nameEn: string; nameAr: string
           <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> {{ i18n.pick('Active', 'نشط') }}</label>
         }
         <div class="form-actions">
-          <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
+          <app-icon-button icon="save" [showLabel]="true" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
           @if (editingId()) { <app-icon-button icon="close" [label]="i18n.pick('Cancel', 'إلغاء')" (pressed)="cancelEdit()" /> }
         </div>
       </form>

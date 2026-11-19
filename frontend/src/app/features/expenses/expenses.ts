@@ -8,7 +8,7 @@ import { apiErrorMessage } from '../../core/http-error';
 import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
-interface Named { id: string; nameEn: string; }
+interface Named { id: string; nameEn: string; nameAr?: string; }
 interface ExpenseDto {
   id: string; locationId: string; locationNameEn: string; category: string;
   descriptionEn: string; descriptionAr: string; amount: number; spentAt: string;
@@ -28,7 +28,7 @@ interface ExpenseDto {
           <span class="field-label">{{ i18n.pick('Location', 'الفرع') }} <span class="req">*</span></span>
           <select formControlName="locationId">
             <option value="">{{ i18n.pick('Location', 'الفرع') }}</option>
-            @for (l of locations(); track l.id) { <option [value]="l.id">{{ l.nameEn }}</option> }
+            @for (l of locations(); track l.id) { <option [value]="l.id">{{ i18n.pick(l.nameEn, l.nameAr || l.nameEn) }}</option> }
           </select>
         </label>
         <label class="field">
@@ -48,7 +48,7 @@ interface ExpenseDto {
           <input formControlName="amount" type="number" step="0.01" [placeholder]="i18n.pick('Amount', 'المبلغ')" />
         </label>
         <div class="form-actions">
-          <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
+          <app-icon-button icon="save" [showLabel]="true" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
           @if (editingId()) { <app-icon-button icon="close" [label]="i18n.pick('Cancel', 'إلغاء')" (pressed)="cancelEdit()" /> }
         </div>
       </form>

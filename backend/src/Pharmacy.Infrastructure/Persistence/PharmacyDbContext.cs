@@ -32,6 +32,7 @@ public sealed class PharmacyDbContext(
     public DbSet<DrugBarcode> DrugBarcodes => Set<DrugBarcode>();
     public DbSet<ProductBatch> ProductBatches => Set<ProductBatch>();
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
+    public DbSet<Shortage> Shortages => Set<Shortage>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerPayment> CustomerPayments => Set<CustomerPayment>();
@@ -91,6 +92,9 @@ public sealed class PharmacyDbContext(
             }
         }
 
+        // Captured before soft-delete rewrites Deleted into Modified, so deletes are logged as deletes.
+        var auditEntries = CaptureAuditEntries(userId, utcNow);
+
         foreach (var entry in ChangeTracker.Entries<ISoftDeletable>())
         {
             if (entry.State == EntityState.Deleted)
@@ -102,7 +106,87 @@ public sealed class PharmacyDbContext(
             }
         }
 
+        AuditLogs.AddRange(auditEntries);
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    // High-volume child rows and the log itself are not audited; their parent (sale, purchase…) is.
+    private static readonly HashSet<Type> NotAudited =
+    [
+        typeof(AuditLog), typeof(InventoryTransaction), typeof(ProductBatch),
+        typeof(SaleItem), typeof(PurchaseItem), typeof(SaleReturnItem)
+    ];
+
+    private static readonly HashSet<string> IgnoredProperties =
+    [
+        nameof(AuditableEntity.CreatedAt), nameof(AuditableEntity.CreatedBy),
+        nameof(AuditableEntity.UpdatedAt), nameof(AuditableEntity.UpdatedBy),
+        nameof(AuditableEntity.DeletedAt), nameof(AuditableEntity.DeletedBy),
+        nameof(TenantOwnedEntity.TenantId), nameof(BaseEntity.Id)
+    ];
+
+    /// <summary>Builds one audit row per created / updated / deleted tenant record (secrets are never logged).</summary>
+    private List<AuditLog> CaptureAuditEntries(Guid? userId, DateTimeOffset utcNow)
+    {
+        var logs = new List<AuditLog>();
+        foreach (var entry in ChangeTracker.Entries<TenantOwnedEntity>())
+        {
+            if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted)) continue;
+            if (NotAudited.Contains(entry.Entity.GetType()) || entry.Entity.TenantId == Guid.Empty) continue;
+
+            var isSoftDelete = entry.State == EntityState.Modified &&
+                               entry.Property(nameof(ISoftDeletable.IsDeleted)) is { IsModified: true, CurrentValue: true };
+            var action = entry.State switch
+            {
+                EntityState.Added => "Create",
+                EntityState.Deleted => "Delete",
+                _ when isSoftDelete => "Delete",
+                _ => "Update"
+            };
+
+            Dictionary<string, object?> oldValues = [];
+            Dictionary<string, object?> newValues = [];
+            foreach (var property in entry.Properties)
+            {
+                var name = property.Metadata.Name;
+                if (IgnoredProperties.Contains(name)) continue;
+                var secret = name.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("Hash", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("Token", StringComparison.OrdinalIgnoreCase);
+
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        newValues[name] = secret ? "***" : property.CurrentValue;
+                        break;
+                    case EntityState.Deleted:
+                        oldValues[name] = secret ? "***" : property.OriginalValue;
+                        break;
+                    default:
+                        if (!property.IsModified || Equals(property.OriginalValue, property.CurrentValue)) continue;
+                        oldValues[name] = secret ? "***" : property.OriginalValue;
+                        newValues[name] = secret ? "***" : property.CurrentValue;
+                        break;
+                }
+            }
+
+            if (action == "Update" && newValues.Count == 0) continue;
+
+            logs.Add(new AuditLog
+            {
+                TenantId = entry.Entity.TenantId,
+                UserId = userId,
+                Action = action,
+                EntityType = entry.Entity.GetType().Name,
+                EntityId = entry.Entity.Id,
+                OldValues = oldValues.Count > 0 ? System.Text.Json.JsonSerializer.Serialize(oldValues) : null,
+                NewValues = newValues.Count > 0 ? System.Text.Json.JsonSerializer.Serialize(newValues) : null,
+                CreatedAt = utcNow,
+                CreatedBy = userId
+            });
+        }
+
+        return logs;
     }
 
     private void ApplyTenantAndSoftDeleteFilters(ModelBuilder modelBuilder)

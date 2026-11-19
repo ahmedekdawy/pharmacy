@@ -8,7 +8,7 @@ import { apiErrorMessage } from '../../core/http-error';
 import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
-interface Named { id: string; nameEn: string; }
+interface Named { id: string; nameEn: string; nameAr?: string; }
 interface CashShiftDto {
   id: string; locationNameEn: string; openedAt: string; closedAt?: string | null;
   openingCash: number; closingCash?: number | null; expectedCash?: number | null; status: string;
@@ -28,7 +28,7 @@ interface CashShiftDto {
           <span class="field-label">{{ i18n.pick('Location', 'الفرع') }} <span class="req">*</span></span>
           <select formControlName="locationId">
             <option value="">{{ i18n.pick('Location', 'الفرع') }}</option>
-            @for (l of locations(); track l.id) { <option [value]="l.id">{{ l.nameEn }}</option> }
+            @for (l of locations(); track l.id) { <option [value]="l.id">{{ i18n.pick(l.nameEn, l.nameAr || l.nameEn) }}</option> }
           </select>
         </label>
         <label class="field">

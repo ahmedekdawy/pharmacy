@@ -83,10 +83,10 @@
           }
         }
 
-        <label class="field"><span class="field-label">{{ pick('Barcode', 'الباركود') }}</span><input formControlName="barcode" /></label>
-        <label class="field"><span class="field-label">{{ pick('Code', 'الكود') }} <span class="req">*</span></span><input formControlName="code" /></label>
+        <label class="field"><span class="field-label">{{ pick('Barcode', 'الباركود') }}</span><input formControlName="barcode" dir="ltr" /></label>
+        <label class="field"><span class="field-label">{{ pick('Code', 'الكود') }} <span class="req">*</span></span><input formControlName="code" dir="ltr" /></label>
         <label class="field"><span class="field-label">{{ pick('Arabic name', 'الاسم عربي') }} <span class="req">*</span></span><input formControlName="nameAr" /></label>
-        <label class="field"><span class="field-label">{{ pick('English name', 'الاسم إنجليزي') }} <span class="req">*</span></span><input formControlName="nameEn" /></label>
+        <label class="field"><span class="field-label">{{ pick('English name', 'الاسم إنجليزي') }} <span class="req">*</span></span><input formControlName="nameEn" dir="ltr" /></label>
         <label class="field"><span class="field-label">{{ pick('Box price', 'سعر العلبة') }} <span class="req">*</span></span><input formControlName="sellingPrice" type="number" min="0" step="0.25" inputmode="decimal" /></label>
         <label class="field"><span class="field-label">{{ pick('Strips per box', 'شرائط في العلبة') }} <span class="req">*</span></span><input formControlName="stripsPerBox" type="number" min="1" step="1" inputmode="numeric" /></label>
         <label class="field"><span class="field-label">{{ pick('Pills per strip', 'حبات في الشريط') }} <span class="req">*</span></span><input formControlName="unitsPerStrip" type="number" min="1" step="1" inputmode="numeric" /></label>

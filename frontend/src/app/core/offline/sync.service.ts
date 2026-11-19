@@ -194,14 +194,27 @@ export class SyncService {
     }
   }
 
-  /** Device-unique invoice number: <device>-<yyMMdd>-<seq>. */
+  /** Device-unique invoice number: <device>-<yyMMdd>-<seq>. Consumes the number immediately. */
   nextInvoiceNumber(prefix = ''): string {
-    const now = new Date();
-    const day = `${String(now.getFullYear()).slice(2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-    const key = `pharmacy.seq.${prefix}${day}`;
-    const seq = (Number(localStorage.getItem(key)) || 0) + 1;
-    localStorage.setItem(key, String(seq));
+    const number = this.peekInvoiceNumber(prefix);
+    this.commitInvoiceNumber(number, prefix);
+    return number;
+  }
+
+  /** The number the next document would get, without consuming it (use for attempts that may be rejected). */
+  peekInvoiceNumber(prefix = ''): string {
+    const day = dayStamp();
+    const seq = (Number(localStorage.getItem(`pharmacy.seq.${prefix}${day}`)) || 0) + 1;
     return `${prefix}${this.deviceId}-${day}-${String(seq).padStart(4, '0')}`;
+  }
+
+  /** Marks a number from {@link peekInvoiceNumber} as used once the document was accepted or queued. */
+  commitInvoiceNumber(number: string, prefix = ''): void {
+    const match = /-(\d{6})-(\d+)$/.exec(number);
+    if (!match) return;
+    const key = `pharmacy.seq.${prefix}${match[1]}`;
+    const seq = Number(match[2]);
+    if (seq > (Number(localStorage.getItem(key)) || 0)) localStorage.setItem(key, String(seq));
   }
 
   // ---------------------------------------------------------------- internals
@@ -419,6 +432,11 @@ export class SyncService {
     }
     return id;
   }
+}
+
+function dayStamp(): string {
+  const now = new Date();
+  return `${String(now.getFullYear()).slice(2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
 }
 
 function pad(n: number): string {

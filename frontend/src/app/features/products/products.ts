@@ -44,6 +44,8 @@ export class Products implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly catalogLoading = signal(false);
   readonly catalogOpen = signal(false);
+  readonly codeError = signal<string | null>(null);
+  readonly packGuess = signal<string | null>(null);
 
   readonly catalogSearch = this.fb.nonNullable.control('');
   readonly form = this.fb.group({
@@ -122,14 +124,26 @@ export class Products implements OnInit, OnDestroy {
     this.selectedDrug.set(drug);
     this.catalogOpen.set(false);
     this.catalogSearch.setValue(drug.commercialNameEn || drug.commercialNameAr);
+    this.codeError.set(null);
+    const pack = guessPack(drug);
     this.form.patchValue({
-      code: buildProductCode(drug),
+      code: uniqueCode(buildProductCode(drug), this.products().map((p) => p.code)),
       nameEn: drug.commercialNameEn || drug.scientificName,
       nameAr: drug.commercialNameAr || drug.commercialNameEn,
       barcode: '',
       sellingPrice: Number(drug.priceEgp) || 0,
-      isActive: true
+      isActive: true,
+      stripsPerBox: pack?.strips ?? 1,
+      unitsPerStrip: pack?.perStrip ?? 1
     });
+    this.packGuess.set(
+      pack
+        ? this.i18n.pick(
+            `Pack filled from the name: ${pack.total} units = ${pack.strips} × ${pack.perStrip}. Check it against the box.`,
+            `تم ملء العبوة من الاسم: ${pack.total} وحدة = ${pack.strips} × ${pack.perStrip}. راجعها على العلبة.`
+          )
+        : null
+    );
     this.form.markAsDirty();
   }
 
@@ -160,6 +174,8 @@ export class Products implements OnInit, OnDestroy {
   clearForm(): void {
     this.editingId.set(null);
     this.selectedDrug.set(null);
+    this.codeError.set(null);
+    this.packGuess.set(null);
     this.catalogSearch.setValue('');
     this.catalogResults.set([]);
     this.catalogOpen.set(false);
@@ -200,6 +216,12 @@ export class Products implements OnInit, OnDestroy {
 
     const value = this.form.getRawValue();
     const editingId = this.editingId();
+    const code = (value.code ?? '').trim().toUpperCase();
+    if (this.products().some((p) => p.id !== editingId && p.code.toUpperCase() === code)) {
+      this.codeError.set(this.i18n.pick('This code is already used by another product.', 'هذا الكود مستخدم لصنف آخر.'));
+      return;
+    }
+    this.error.set(null);
     const payload = {
       code: value.code!,
       nameAr: value.nameAr!,
@@ -221,7 +243,7 @@ export class Products implements OnInit, OnDestroy {
           this.clearForm();
           this.reload();
         },
-        error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Update product failed.', 'فشل تحديث الصنف.')))
+        error: (err) => this.showSaveError(apiErrorMessage(err, this.i18n.pick('Update product failed.', 'فشل تحديث الصنف.')))
       });
       return;
     }
@@ -231,8 +253,17 @@ export class Products implements OnInit, OnDestroy {
         this.clearForm();
         this.reload();
       },
-      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Create product failed.', 'فشل إضافة الصنف.')))
+      error: (err) => this.showSaveError(apiErrorMessage(err, this.i18n.pick('Create product failed.', 'فشل إضافة الصنف.')))
     });
+  }
+
+  /** Code conflicts are shown under the code field; anything else at the top of the page. */
+  private showSaveError(message: string): void {
+    if (/product code|كود الصنف/i.test(message)) {
+      this.codeError.set(message);
+      return;
+    }
+    this.error.set(message);
   }
 
   remove(product: ProductDto): void {
@@ -252,8 +283,37 @@ export class Products implements OnInit, OnDestroy {
   }
 }
 
-function buildProductCode(drug: EgyptianDrug): string {
+/**
+ * Code from the whole commercial name (pack size included) so sizes of the same drug get different codes:
+ * "Panadol Advance 500mg 24 tab" → EG-PANADOL-ADVANCE-500MG-24-TAB. Backend limit is 64 chars.
+ */
+export function buildProductCode(drug: EgyptianDrug): string {
   const source = (drug.commercialNameEn || drug.scientificName || 'DRUG').toUpperCase();
-  const slug = source.replace(/[^A-Z0-9]+/g, '').slice(0, 16) || 'DRUG';
+  const slug = source.replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56).replace(/-+$/, '') || 'DRUG';
   return `EG-${slug}`;
+}
+
+/** Appends -2, -3… when the code is already taken. */
+export function uniqueCode(code: string, existing: string[]): string {
+  const taken = new Set(existing.map((c) => c.toUpperCase()));
+  if (!taken.has(code.toUpperCase())) return code;
+  for (let i = 2; ; i++) {
+    const candidate = `${code}-${i}`;
+    if (!taken.has(candidate.toUpperCase())) return candidate;
+  }
+}
+
+/**
+ * Reads the pack size from the drug name ("24 f.c. tabs", "30 caps", "علبة 20 قرص").
+ * Blister strips are usually 10 units, so 20/30 → 2/3 strips of 10; other counts stay as one strip.
+ */
+export function guessPack(drug: EgyptianDrug): { total: number; strips: number; perStrip: number } | null {
+  const text = `${drug.commercialNameEn} ${drug.commercialNameAr}`;
+  const match =
+    /(\d{1,4})\s*(?:f\.?\s*c\.?\s*)?(?:tabs?|tablets?|caps?|capsules?|cap\.|sachets?|supp)\b/i.exec(text) ??
+    /(\d{1,4})\s*(?:قرص|أقراص|اقراص|كبسول|كبسولة|كيس|لبوس)/.exec(text);
+  const total = match ? Number(match[1]) : 0;
+  if (!total || total > 1000) return null;
+  const strips = total > 10 && total % 10 === 0 ? total / 10 : 1;
+  return { total, strips, perStrip: total / strips };
 }

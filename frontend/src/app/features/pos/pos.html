@@ -51,7 +51,7 @@
         <li [class.out]="p.stock <= 0">
           <button type="button" class="result-main" (click)="add(p)">
             <strong>{{ name(p) }}</strong>
-            <small>{{ p.code }} · {{ stockText(p) }}</small>
+            <small><bdi dir="ltr">{{ p.code }}</bdi> · {{ stockText(p) }}</small>
           </button>
           <div class="unit-buttons">
             @for (u of units(p); track u) {
@@ -59,11 +59,24 @@
                 {{ unitName(u) }}<b>{{ priceOf(p, u) | number: '1.2-2' }}</b>
               </button>
             }
+            @if (canAddShortage()) {
+              <button type="button" class="shortage-btn" (click)="openShortage(p)"
+                      [attr.title]="pick('Add to shortages', 'إضافة للنواقص')" [attr.aria-label]="pick('Add to shortages', 'إضافة للنواقص') + ': ' + name(p)">
+                + {{ pick('Shortage', 'نواقص') }}
+              </button>
+            }
           </div>
         </li>
       }
       @if (query() && !results().length) {
-        <li class="hint">{{ pick('No matching products.', 'لا توجد نتائج.') }}</li>
+        <li class="hint">
+          {{ pick('No matching products.', 'لا توجد نتائج.') }}
+          @if (canAddShortage()) {
+            <button type="button" class="shortage-btn" (click)="openShortage(null, query())">
+              + {{ pick('Add', 'أضف') }} «<bdi>{{ query() }}</bdi>» {{ pick('to shortages', 'للنواقص') }}
+            </button>
+          }
+        </li>
       }
     </ul>
   </div>
@@ -98,12 +111,16 @@
             </div>
             <label class="price">
               <span>{{ pick('Price', 'السعر') }}</span>
-              <input type="number" min="0" step="0.25" inputmode="decimal" [value]="l.price" (change)="setPrice(l, num($any($event.target).value))" />
+              <input type="number" min="0.01" step="0.25" inputmode="decimal" [class.invalid]="!(l.price > 0)" [attr.aria-invalid]="!(l.price > 0)" [value]="l.price" (change)="setPrice(l, num($any($event.target).value))" />
             </label>
             <b class="total">{{ lineTotal(l) | number: '1.2-2' }}</b>
           </div>
           @if (shortages().has(l.product.id)) {
-            <small class="warn">{{ pick('Quantity exceeds stock on hand', 'الكمية أكبر من المتاح بالمخزن') }} ({{ stockText(l.product) }})</small>
+            <small class="warn">{{ pick('Quantity exceeds stock on hand', 'الكمية أكبر من المتاح بالمخزن') }} ({{ stockText(l.product) }})
+              @if (canAddShortage()) {
+                · <button type="button" class="link-btn" (click)="openShortage(l.product)">{{ pick('Add to shortages', 'أضف للنواقص') }}</button>
+              }
+            </small>
           }
         </li>
       } @empty {
@@ -161,7 +178,7 @@
       <div class="row"><span>{{ pick('Subtotal', 'الإجمالي') }}</span><b>{{ subTotal() | number: '1.2-2' }}</b></div>
       <div class="row">
         <label for="posDiscount">{{ pick('Discount', 'خصم') }}</label>
-        <input id="posDiscount" type="number" min="0" step="0.5" inputmode="decimal" [value]="discount() || ''" (input)="discount.set(num($any($event.target).value))" placeholder="0" />
+        <input id="posDiscount" type="number" min="0" [attr.max]="subTotal()" step="0.5" inputmode="decimal" [class.invalid]="discountTooHigh() || discount() < 0" [value]="discount() || ''" (input)="discount.set(num($any($event.target).value))" placeholder="0" />
       </div>
       <div class="row grand"><span>{{ pick('Net', 'الصافي') }}</span><b>{{ total() | number: '1.2-2' }}</b></div>
 
@@ -200,9 +217,10 @@
     </label>
 
     @if (error()) { <p class="error">{{ error() }}</p> }
+    @if (blocker(); as b) { @if (b !== error()) { <p class="error" role="status">{{ b }}</p> } }
 
     @if (auth.hasPermission('Sale.Create')) {
-      <button type="button" class="checkout" [disabled]="!itemCount() || busy()" (click)="checkout()">
+      <button type="button" class="checkout" [disabled]="!itemCount() || busy() || !!blocker()" (click)="checkout()">
         {{ busy() ? pick('Saving…', 'جاري الحفظ…') : pick('Complete sale', 'إتمام البيع') }} · {{ total() | number: '1.2-2' }}
       </button>
     }
@@ -214,6 +232,14 @@
       <span>{{ pick('Invoice', 'الفاتورة') }} ({{ itemCount() }})</span>
       <b>{{ total() | number: '1.2-2' }}</b>
     </button>
+  }
+
+  @if (shortageDialog(); as d) {
+    <app-shortage-quick-add [product]="d.product" [initialName]="d.name" [locationId]="locationId()"
+                            (saved)="onShortageSaved($event)" (closed)="closeShortage()" />
+  }
+  @if (toast()) {
+    <div class="toast" role="status">{{ toast() }}</div>
   }
 
   <!-- receipt dialog -->

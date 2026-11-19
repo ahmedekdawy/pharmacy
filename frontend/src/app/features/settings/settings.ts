@@ -20,26 +20,36 @@ interface SettingDto { key: string; value: string; }
     <form [formGroup]="form" (ngSubmit)="save()">
       <label class="field">
         <span class="field-label">{{ i18n.pick('Key', 'المفتاح') }} <span class="req">*</span></span>
-        <input formControlName="key" [placeholder]="i18n.pick('Key (e.g. currency)', 'المفتاح (مثال: currency)')" [readonly]="!!editingKey()" />
+        <input formControlName="key" dir="ltr" list="knownSettingKeys" [placeholder]="i18n.pick('Choose or type a key', 'اختر أو اكتب المفتاح')" [readonly]="!!editingKey()" />
+        <datalist id="knownSettingKeys">
+          @for (k of knownKeys; track k.key) { <option [value]="k.key">{{ i18n.pick(k.en, k.ar) }}</option> }
+        </datalist>
+        @if (labelOf(form.controls.key.value); as l) { <small class="hint">{{ l }}</small> }
       </label>
       <label class="field">
         <span class="field-label">{{ i18n.pick('Value', 'القيمة') }} <span class="req">*</span></span>
         <input formControlName="value" [placeholder]="i18n.pick('Value', 'القيمة')" />
       </label>
       <div class="form-actions">
-        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingKey() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save setting', 'حفظ الإعداد')" />
+        <app-icon-button icon="save" [showLabel]="true" type="submit" tone="primary" [label]="editingKey() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save setting', 'حفظ الإعداد')" />
         @if (editingKey()) { <app-icon-button icon="close" [label]="i18n.pick('Cancel', 'إلغاء')" (pressed)="cancelEdit()" /> }
       </div>
     </form>
     <ul>
       @for (item of items(); track item.key) {
         <li>
-          <div><strong>{{ item.key }}</strong> = {{ item.value }}</div>
+          <div>
+            <strong>{{ labelOf(item.key) || item.key }}</strong>
+            <span class="value" dir="auto">{{ item.value }}</span>
+            @if (labelOf(item.key)) { <small class="hint" dir="ltr">{{ item.key }}</small> }
+          </div>
           <div class="actions">
             <app-icon-button icon="edit" [label]="i18n.pick('Edit', 'تعديل')" (pressed)="startEdit(item)" />
             <app-icon-button icon="delete" tone="danger" [label]="i18n.pick('Delete', 'حذف')" (pressed)="remove(item)" />
           </div>
         </li>
+      } @empty {
+        <li class="empty-state">{{ i18n.pick('No settings yet.', 'لا توجد إعدادات بعد.') }}</li>
       }
     </ul>
   </section>`,
@@ -52,6 +62,9 @@ interface SettingDto { key: string; value: string; }
     ul { list-style:none; padding:0; }
     li { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.75rem 0; border-bottom:1px solid var(--border); }
     .error { color:#c45c4a; }
+    li > div:first-child { display:grid; gap:.15rem; }
+    .value { word-break:break-word; }
+    .hint { color:var(--muted); font-size:.78rem; }
   `]
 })
 export class SettingsPage implements OnInit {
@@ -61,6 +74,17 @@ export class SettingsPage implements OnInit {
   readonly items = signal<SettingDto[]>([]);
   readonly editingKey = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+
+  /** Settings the app actually reads, with human labels. Other keys are still allowed. */
+  readonly knownKeys = [
+    { key: 'Contact.WhatsApp', en: 'WhatsApp number (shown on the public page)', ar: 'رقم واتساب (يظهر في صفحة الصيدلية)' }
+  ];
+
+  labelOf(key: string | null | undefined): string | null {
+    const known = this.knownKeys.find((k) => k.key.toLowerCase() === (key ?? '').trim().toLowerCase());
+    return known ? this.i18n.pick(known.en, known.ar) : null;
+  }
+
   readonly form = this.fb.group({
     key: ['', Validators.required],
     value: ['', Validators.required]
