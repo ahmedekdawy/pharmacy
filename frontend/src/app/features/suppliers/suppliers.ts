@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
 import { apiErrorMessage } from '../../core/http-error';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface SupplierDto { id: string; code: string; nameEn: string; nameAr: string; phone?: string; email?: string; isActive: boolean; }
@@ -15,21 +16,36 @@ interface SupplierDto { id: string; code: string; nameEn: string; nameAr: string
   imports: [ReactiveFormsModule, IconButton],
   template: `
   <section class="page">
-    <h1>Suppliers</h1>
+    <h1>{{ i18n.pick('Suppliers', 'الموردون') }}</h1>
     @if (error()) { <p class="error">{{ error() }}</p> }
     @if (auth.hasPermission('Supplier.Manage')) {
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <input formControlName="code" placeholder="Code" />
-        <input formControlName="nameEn" placeholder="Name EN" />
-        <input formControlName="nameAr" placeholder="Name AR" />
-        <input formControlName="phone" placeholder="Phone" />
-        <input formControlName="email" placeholder="Email" />
+        <label class="field">
+          <span class="field-label">{{ i18n.pick('Code', 'الكود') }} <span class="req">*</span></span>
+          <input formControlName="code" [placeholder]="i18n.pick('Code', 'الكود')" />
+        </label>
+        <label class="field">
+          <span class="field-label">{{ i18n.pick('Name (English)', 'الاسم (إنجليزي)') }} <span class="req">*</span></span>
+          <input formControlName="nameEn" [placeholder]="i18n.pick('Name in English', 'الاسم بالإنجليزية')" />
+        </label>
+        <label class="field">
+          <span class="field-label">{{ i18n.pick('Name (Arabic)', 'الاسم (عربي)') }} <span class="req">*</span></span>
+          <input formControlName="nameAr" [placeholder]="i18n.pick('Name in Arabic', 'الاسم بالعربية')" />
+        </label>
+        <label class="field">
+          <span class="field-label">{{ i18n.pick('Phone', 'الهاتف') }}</span>
+          <input formControlName="phone" [placeholder]="i18n.pick('Phone', 'الهاتف')" />
+        </label>
+        <label class="field">
+          <span class="field-label">{{ i18n.pick('Email', 'البريد الإلكتروني') }}</span>
+          <input formControlName="email" [placeholder]="i18n.pick('Email', 'البريد الإلكتروني')" />
+        </label>
         @if (editingId()) {
-          <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
+          <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> {{ i18n.pick('Active', 'نشط') }}</label>
         }
         <div class="form-actions">
-          <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? 'Update' : 'Save'" />
-          @if (editingId()) { <app-icon-button icon="close" label="Cancel" (pressed)="cancelEdit()" /> }
+          <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
+          @if (editingId()) { <app-icon-button icon="close" [label]="i18n.pick('Cancel', 'إلغاء')" (pressed)="cancelEdit()" /> }
         </div>
       </form>
     }
@@ -39,8 +55,8 @@ interface SupplierDto { id: string; code: string; nameEn: string; nameAr: string
           <div><strong>{{ item.code }}</strong> — {{ item.nameEn }} / {{ item.nameAr }}</div>
           @if (auth.hasPermission('Supplier.Manage')) {
             <div class="actions">
-              <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(item)" />
-              <app-icon-button icon="delete" tone="danger" label="Delete" (pressed)="remove(item)" />
+              <app-icon-button icon="edit" [label]="i18n.pick('Edit', 'تعديل')" (pressed)="startEdit(item)" />
+              <app-icon-button icon="delete" tone="danger" [label]="i18n.pick('Delete', 'حذف')" (pressed)="remove(item)" />
             </div>
           }
         </li>
@@ -50,7 +66,7 @@ interface SupplierDto { id: string; code: string; nameEn: string; nameAr: string
   styles: [`
     :host { display:block; padding:1.5rem; color:var(--text); }
     .page { max-width:56rem; margin:0 auto; }
-    form { display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.75rem; margin-bottom:1.25rem; align-items:center; }
+    form { display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.75rem; margin-bottom:1.25rem; align-items:end; }
     input { padding:.7rem .8rem; border-radius:.35rem; border:1px solid var(--border); font:inherit; background:var(--surface); color:var(--text); }
     .form-actions,.actions { display:flex; gap:.45rem; align-items:center; }
     .active-toggle { display:flex; align-items:center; gap:.4rem; }
@@ -63,6 +79,7 @@ export class SuppliersPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
+  readonly i18n = inject(LocalizationService);
   readonly items = signal<SupplierDto[]>([]);
   readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -80,7 +97,7 @@ export class SuppliersPage implements OnInit {
   reload(): void {
     this.http.get<ApiResponse<SupplierDto[]>>(`${environment.apiBaseUrl}/suppliers`).subscribe({
       next: (res) => this.items.set(res.data ?? []),
-      error: () => this.error.set('Unable to load suppliers.')
+      error: () => this.error.set(this.i18n.pick('Unable to load suppliers.', 'تعذر تحميل الموردين.'))
     });
   }
 
@@ -106,15 +123,15 @@ export class SuppliersPage implements OnInit {
       : this.http.post(`${environment.apiBaseUrl}/suppliers`, body);
     req$.subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Save failed', 'فشل الحفظ')))
     });
   }
 
   remove(item: SupplierDto): void {
-    if (!confirm(`Delete ${item.code}?`)) return;
+    if (!confirm(this.i18n.pick(`Delete ${item.code}?`, `حذف ${item.code}؟`))) return;
     this.http.delete(`${environment.apiBaseUrl}/suppliers/${item.id}`).subscribe({
       next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Delete failed', 'فشل الحذف')))
     });
   }
 }

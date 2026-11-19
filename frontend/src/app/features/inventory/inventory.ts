@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
 import { apiErrorMessage } from '../../core/http-error';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface StockItem {
@@ -28,6 +29,7 @@ export class InventoryPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
+  readonly i18n = inject(LocalizationService);
 
   readonly stock = signal<StockItem[]>([]);
   readonly nearExpiry = signal<NearExpiry[]>([]);
@@ -83,7 +85,7 @@ export class InventoryPage implements OnInit {
   reload(): void {
     this.http.get<ApiResponse<StockItem[]>>(`${environment.apiBaseUrl}/inventory/stock`).subscribe({
       next: (res) => this.stock.set(res.data ?? []),
-      error: () => this.error.set('Unable to load stock.')
+      error: () => this.error.set(this.i18n.pick('Unable to load stock.', 'تعذر تحميل المخزون.'))
     });
     this.http.get<ApiResponse<NearExpiry[]>>(`${environment.apiBaseUrl}/inventory/near-expiry?days=90`).subscribe({
       next: (res) => this.nearExpiry.set(res.data ?? [])
@@ -108,7 +110,7 @@ export class InventoryPage implements OnInit {
         this.form.patchValue({ batchNumber: '', quantity: 1, purchasePrice: 0, expiryDate: '' });
         this.reload();
       },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Opening balance failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Opening balance failed', 'فشل تسجيل الرصيد الافتتاحي')))
     });
   }
 
@@ -121,7 +123,7 @@ export class InventoryPage implements OnInit {
       notes: null
     }).subscribe({
       next: () => { this.transferForm.patchValue({ quantity: 1 }); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Transfer failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Transfer failed', 'فشل التحويل')))
     });
   }
 
@@ -136,7 +138,7 @@ export class InventoryPage implements OnInit {
       reason: v.reason || null
     }).subscribe({
       next: () => { this.adjustForm.patchValue({ quantityDelta: 1, reason: '' }); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Adjust failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Adjust failed', 'فشلت التسوية')))
     });
   }
 }

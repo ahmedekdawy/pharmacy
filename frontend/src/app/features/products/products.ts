@@ -94,7 +94,7 @@ export class Products implements OnInit, OnDestroy {
         },
         error: () => {
           this.catalogLoading.set(false);
-          this.error.set('Unable to search Egyptian drug catalog.');
+          this.error.set(this.i18n.pick('Unable to search Egyptian drug catalog.', 'تعذر البحث في دليل الأدوية المصرية.'));
         }
       });
   }
@@ -183,7 +183,10 @@ export class Products implements OnInit, OnDestroy {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Unable to load products. Ensure API is running and tenant header is set.');
+        this.error.set(this.i18n.pick(
+          'Unable to load products. Ensure API is running and tenant header is set.',
+          'تعذر تحميل الأصناف. تأكد من تشغيل الخادم وتحديد كود الصيدلية.'
+        ));
         this.loading.set(false);
       }
     });
@@ -218,7 +221,7 @@ export class Products implements OnInit, OnDestroy {
           this.clearForm();
           this.reload();
         },
-        error: (err) => this.error.set(apiErrorMessage(err, 'Update product failed.'))
+        error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Update product failed.', 'فشل تحديث الصنف.')))
       });
       return;
     }
@@ -228,12 +231,12 @@ export class Products implements OnInit, OnDestroy {
         this.clearForm();
         this.reload();
       },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Create product failed.'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Create product failed.', 'فشل إضافة الصنف.')))
     });
   }
 
   remove(product: ProductDto): void {
-    if (!confirm(`Delete product ${product.code}?`)) {
+    if (!confirm(this.i18n.pick(`Delete product ${product.code}?`, `حذف الصنف ${product.code}؟`))) {
       return;
     }
 
@@ -244,7 +247,7 @@ export class Products implements OnInit, OnDestroy {
         }
         this.reload();
       },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Delete product failed.'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Delete product failed.', 'فشل حذف الصنف.')))
     });
   }
 }

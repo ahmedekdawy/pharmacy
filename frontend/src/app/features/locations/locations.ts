@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
 import { apiErrorMessage } from '../../core/http-error';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface LocationDto { id: string; nameEn: string; nameAr: string; type: number | string; isActive: boolean; }
@@ -20,6 +21,7 @@ export class LocationsPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
+  readonly i18n = inject(LocalizationService);
   readonly items = signal<LocationDto[]>([]);
   readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -35,13 +37,13 @@ export class LocationsPage implements OnInit {
   reload(): void {
     this.http.get<ApiResponse<LocationDto[]>>(`${environment.apiBaseUrl}/locations`).subscribe({
       next: (res) => this.items.set(res.data ?? []),
-      error: () => this.error.set('Unable to load locations.')
+      error: () => this.error.set(this.i18n.pick('Unable to load locations.', 'تعذر تحميل الفروع.'))
     });
   }
 
   typeLabel(type: number | string): string {
     const value = Number(type);
-    return value === 2 ? 'Warehouse' : value === 1 ? 'Branch' : String(type);
+    return value === 2 ? this.i18n.pick('Warehouse', 'مخزن') : value === 1 ? this.i18n.pick('Branch', 'فرع') : String(type);
   }
 
   startEdit(item: LocationDto): void {
@@ -74,15 +76,15 @@ export class LocationsPage implements OnInit {
       : this.http.post(`${environment.apiBaseUrl}/locations`, body);
     req$.subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Save failed', 'فشل الحفظ')))
     });
   }
 
   remove(item: LocationDto): void {
-    if (!confirm(`Delete ${item.nameEn}?`)) return;
+    if (!confirm(this.i18n.pick(`Delete ${item.nameEn}?`, `حذف ${item.nameAr}؟`))) return;
     this.http.delete(`${environment.apiBaseUrl}/locations/${item.id}`).subscribe({
       next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Delete failed', 'فشل الحذف')))
     });
   }
 }

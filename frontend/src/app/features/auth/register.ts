@@ -65,7 +65,7 @@ export class Register {
         },
         error: (err) => {
           this.loading.set(false);
-          this.error.set(apiErrorMessage(err, 'Registration failed'));
+          this.error.set(apiErrorMessage(err, this.i18n.pick('Registration failed', 'فشل التسجيل')));
         }
       });
   }

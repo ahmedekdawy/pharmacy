@@ -8,7 +8,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 export function apiErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof HttpErrorResponse) {
     if (err.status === 0) {
-      return 'Unable to reach the server. Check your connection and try again.';
+      return isArabic()
+        ? 'تعذر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى.'
+        : 'Unable to reach the server. Check your connection and try again.';
     }
     const body = err.error;
     if (typeof body === 'string' && body.trim()) {
@@ -34,4 +36,9 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
     return err.message;
   }
   return fallback;
+}
+
+/** LocalizationService keeps <html lang> in sync with the chosen UI language. */
+function isArabic(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.lang === 'ar';
 }

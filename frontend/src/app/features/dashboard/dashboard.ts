@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface DashboardDto {
@@ -21,16 +22,16 @@ interface DashboardDto {
   imports: [DecimalPipe, RouterLink],
   template: `
   <section class="page">
-    <h1>Dashboard</h1>
+    <h1>{{ i18n.pick('Dashboard', 'لوحة التحكم') }}</h1>
     @if (error()) { <p class="error">{{ error() }}</p> }
     @if (data(); as d) {
       <div class="grid">
-        <a class="tile" routerLink="/app/products"><span>Products</span><strong>{{ d.productCount }}</strong></a>
-        <a class="tile" routerLink="/app/inventory"><span>Low stock</span><strong>{{ d.lowStockCount }}</strong></a>
-        <a class="tile" routerLink="/app/inventory"><span>Near expiry</span><strong>{{ d.nearExpiryCount }}</strong></a>
-        <a class="tile" routerLink="/app/sales"><span>Today sales</span><strong>{{ d.todaySalesCount }} / {{ d.todaySalesTotal | number:'1.2-2' }}</strong></a>
-        <a class="tile" routerLink="/app/cash-shifts"><span>Open shifts</span><strong>{{ d.openCashShifts }}</strong></a>
-        <a class="tile" routerLink="/app/expenses"><span>Month expenses</span><strong>{{ d.monthExpensesTotal | number:'1.2-2' }}</strong></a>
+        <a class="tile" routerLink="/app/products"><span>{{ i18n.pick('Products', 'الأصناف') }}</span><strong>{{ d.productCount }}</strong></a>
+        <a class="tile" routerLink="/app/inventory"><span>{{ i18n.pick('Low stock', 'رصيد منخفض') }}</span><strong>{{ d.lowStockCount }}</strong></a>
+        <a class="tile" routerLink="/app/inventory"><span>{{ i18n.pick('Near expiry', 'قارب على الانتهاء') }}</span><strong>{{ d.nearExpiryCount }}</strong></a>
+        <a class="tile" routerLink="/app/sales"><span>{{ i18n.pick('Today sales', 'مبيعات اليوم') }}</span><strong>{{ d.todaySalesCount }} / {{ d.todaySalesTotal | number:'1.2-2' }}</strong></a>
+        <a class="tile" routerLink="/app/cash-shifts"><span>{{ i18n.pick('Open shifts', 'الورديات المفتوحة') }}</span><strong>{{ d.openCashShifts }}</strong></a>
+        <a class="tile" routerLink="/app/expenses"><span>{{ i18n.pick('Month expenses', 'مصروفات الشهر') }}</span><strong>{{ d.monthExpensesTotal | number:'1.2-2' }}</strong></a>
       </div>
     }
   </section>`,
@@ -49,13 +50,14 @@ interface DashboardDto {
 })
 export class DashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
+  readonly i18n = inject(LocalizationService);
   readonly data = signal<DashboardDto | null>(null);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
     this.http.get<ApiResponse<DashboardDto>>(`${environment.apiBaseUrl}/dashboard`).subscribe({
       next: (res) => this.data.set(res.data),
-      error: () => this.error.set('Unable to load dashboard.')
+      error: () => this.error.set(this.i18n.pick('Unable to load dashboard.', 'تعذر تحميل لوحة التحكم.'))
     });
   }
 }

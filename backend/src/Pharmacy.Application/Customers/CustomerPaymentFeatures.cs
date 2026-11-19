@@ -1,3 +1,4 @@
+using Pharmacy.Shared.Localization;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -86,7 +87,7 @@ public sealed class CreateCustomerPaymentCommandHandler(IPharmacyDbContext db, I
         };
         db.CustomerPayments.Add(payment);
         await db.SaveChangesAsync(cancellationToken);
-        return new CreateCustomerPaymentResult(payment.Id, payment.Number, balance - payment.Amount, false, warnings);
+        return new CreateCustomerPaymentResult(payment.Id, payment.Number, balance - payment.Amount, false, ErrorMessages.LocalizeAll(warnings));
     }
 }
 

@@ -2,23 +2,28 @@
   <!-- ============ catalog / search ============ -->
   <div class="catalog">
     <div class="bar">
-      <select [value]="locationId()" (change)="setLocation($any($event.target).value)" [attr.aria-label]="pick('Branch', 'الفرع')">
-        @for (l of sync.locations(); track l.id) {
-          <option [value]="l.id" [selected]="l.id === locationId()">{{ name(l) }}</option>
-        }
-      </select>
+      <label class="field branch">
+        <span class="field-label">{{ pick('Branch', 'الفرع') }} <span class="req">*</span></span>
+        <select [value]="locationId()" (change)="setLocation($any($event.target).value)" [attr.aria-label]="pick('Branch', 'الفرع')">
+          @for (l of sync.locations(); track l.id) {
+            <option [value]="l.id" [selected]="l.id === locationId()">{{ name(l) }}</option>
+          }
+        </select>
+      </label>
       <span class="net" [class.off]="!sync.online()">
         {{ sync.online() ? pick('Online', 'متصل') : pick('Offline', 'بدون إنترنت') }}
         @if (sync.pendingCount()) { · {{ sync.pendingCount() }} {{ pick('pending', 'بانتظار المزامنة') }} }
       </span>
     </div>
 
+    <label class="search-label" for="posSearch">{{ pick('Search / barcode', 'بحث / باركود') }}</label>
     <div class="search-row">
     @if (cameraSupported()) {
       <button type="button" class="cam" (click)="cameraOpen.set(true)" [attr.aria-label]="pick('Scan with camera', 'مسح بالكاميرا')">📷</button>
     }
     <input
       #searchBox
+      id="posSearch"
       class="search"
       type="search"
       inputmode="search"
@@ -87,9 +92,9 @@
           </div>
           <div class="line-row">
             <div class="stepper">
-              <button type="button" (click)="setQty(l, l.qty - 1)">−</button>
-              <input type="number" min="0" step="1" inputmode="decimal" [value]="l.qty" (change)="setQty(l, num($any($event.target).value))" />
-              <button type="button" (click)="setQty(l, l.qty + 1)">+</button>
+              <button type="button" (click)="setQty(l, l.qty - 1)" [attr.aria-label]="pick('Decrease', 'تقليل')">−</button>
+              <input type="number" min="0" step="1" inputmode="decimal" [attr.aria-label]="pick('Quantity', 'الكمية')" [value]="l.qty" (change)="setQty(l, num($any($event.target).value))" />
+              <button type="button" (click)="setQty(l, l.qty + 1)" [attr.aria-label]="pick('Increase', 'زيادة')">+</button>
             </div>
             <label class="price">
               <span>{{ pick('Price', 'السعر') }}</span>
@@ -108,16 +113,17 @@
 
     <!-- customer -->
     <div class="block">
-      <label class="lbl">{{ pick('Customer', 'العميل') }}</label>
+      <label class="lbl" for="posCustomer">{{ pick('Customer', 'العميل') }}</label>
       @if (customer(); as c) {
         <div class="chip">
           <span>{{ name(c) }} @if (c.phone) { · {{ c.phone }} }</span>
           <span class="bal" [class.debt]="c.balance > 0">{{ pick('Balance', 'الرصيد') }}: {{ c.balance | number: '1.2-2' }}</span>
-          <button type="button" class="x" (click)="selectCustomer(null)">×</button>
+          <button type="button" class="x" (click)="selectCustomer(null)" [attr.aria-label]="pick('Remove customer', 'إزالة العميل')">×</button>
         </div>
       } @else {
         <div class="cust-search">
           <input
+            id="posCustomer"
             type="search"
             [value]="customerQuery()"
             (input)="customerQuery.set($any($event.target).value)"
@@ -136,8 +142,14 @@
         }
         @if (showNewCustomer()) {
           <div class="new-cust">
-            <input [value]="newCustomerName()" (input)="newCustomerName.set($any($event.target).value)" [placeholder]="pick('Name', 'الاسم')" />
-            <input [value]="newCustomerPhone()" (input)="newCustomerPhone.set($any($event.target).value)" inputmode="tel" [placeholder]="pick('Phone', 'الهاتف')" />
+            <label class="field">
+              <span class="field-label">{{ pick('Name', 'الاسم') }} <span class="req">*</span></span>
+              <input [value]="newCustomerName()" (input)="newCustomerName.set($any($event.target).value)" [placeholder]="pick('Name', 'الاسم')" />
+            </label>
+            <label class="field">
+              <span class="field-label">{{ pick('Phone', 'الهاتف') }}</span>
+              <input [value]="newCustomerPhone()" (input)="newCustomerPhone.set($any($event.target).value)" inputmode="tel" [placeholder]="pick('Phone', 'الهاتف')" />
+            </label>
             <button type="button" class="btn" (click)="createCustomer()">{{ pick('Add', 'إضافة') }}</button>
           </div>
         }
@@ -148,8 +160,8 @@
     <div class="block totals">
       <div class="row"><span>{{ pick('Subtotal', 'الإجمالي') }}</span><b>{{ subTotal() | number: '1.2-2' }}</b></div>
       <div class="row">
-        <span>{{ pick('Discount', 'خصم') }}</span>
-        <input type="number" min="0" step="0.5" inputmode="decimal" [value]="discount() || ''" (input)="discount.set(num($any($event.target).value))" placeholder="0" />
+        <label for="posDiscount">{{ pick('Discount', 'خصم') }}</label>
+        <input id="posDiscount" type="number" min="0" step="0.5" inputmode="decimal" [value]="discount() || ''" (input)="discount.set(num($any($event.target).value))" placeholder="0" />
       </div>
       <div class="row grand"><span>{{ pick('Net', 'الصافي') }}</span><b>{{ total() | number: '1.2-2' }}</b></div>
 
@@ -161,8 +173,9 @@
       </div>
 
       <div class="row">
-        <span>{{ pick('Paid', 'المدفوع') }}</span>
+        <label for="posPaid">{{ pick('Paid', 'المدفوع') }}</label>
         <input
+          id="posPaid"
           type="number"
           min="0"
           step="0.5"
@@ -181,7 +194,10 @@
       @if (creditWarning()) { <p class="warn">{{ creditWarning() }}</p> }
     </div>
 
-    <input class="notes" [value]="notes()" (input)="notes.set($any($event.target).value)" [placeholder]="pick('Notes (optional)', 'ملاحظات (اختياري)')" />
+    <label class="field">
+      <span class="field-label">{{ pick('Notes', 'ملاحظات') }}</span>
+      <input class="notes" [value]="notes()" (input)="notes.set($any($event.target).value)" [placeholder]="pick('Notes (optional)', 'ملاحظات (اختياري)')" />
+    </label>
 
     @if (error()) { <p class="error">{{ error() }}</p> }
 

@@ -2,19 +2,19 @@
   <a routerLink="/" class="brand">{{ t('BRAND.NAME') }}</a>
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <label>
-      Tenant Code *
+      {{ i18n.pick('Tenant Code', 'كود الصيدلية') }} <span class="req">*</span>
       <input formControlName="tenantCode" autocomplete="organization" />
-      <app-field-error [control]="form.controls.tenantCode" label="Tenant code" />
+      <app-field-error [control]="form.controls.tenantCode" [label]="i18n.pick('Tenant code', 'كود الصيدلية')" />
     </label>
     <label>
-      Email or Mobile *
+      {{ i18n.pick('Email or Mobile', 'البريد الإلكتروني أو الموبايل') }} <span class="req">*</span>
       <input type="text" formControlName="identifier" autocomplete="username" />
-      <app-field-error [control]="form.controls.identifier" label="Email or mobile" />
+      <app-field-error [control]="form.controls.identifier" [label]="i18n.pick('Email or mobile', 'البريد الإلكتروني أو الموبايل')" />
     </label>
     <label>
-      Password *
+      {{ i18n.pick('Password', 'كلمة المرور') }} <span class="req">*</span>
       <input type="password" formControlName="password" autocomplete="current-password" />
-      <app-field-error [control]="form.controls.password" label="Password" />
+      <app-field-error [control]="form.controls.password" [label]="i18n.pick('Password', 'كلمة المرور')" />
     </label>
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>

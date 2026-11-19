@@ -9,12 +9,21 @@
 
   @if (auth.hasPermission('Role.Manage')) {
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <input formControlName="code" placeholder="Code" />
-      <input formControlName="nameEn" placeholder="Name EN" />
-      <input formControlName="nameAr" placeholder="Name AR" />
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Code', 'الكود') }} <span class="req">*</span></span>
+        <input formControlName="code" [placeholder]="i18n.pick('Code', 'الكود')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Name (English)', 'الاسم (إنجليزي)') }} <span class="req">*</span></span>
+        <input formControlName="nameEn" [placeholder]="i18n.pick('Name in English', 'الاسم بالإنجليزية')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Name (Arabic)', 'الاسم (عربي)') }} <span class="req">*</span></span>
+        <input formControlName="nameAr" [placeholder]="i18n.pick('Name in Arabic', 'الاسم بالعربية')" />
+      </label>
 
       <fieldset>
-        <legend>Permissions</legend>
+        <legend>{{ i18n.pick('Permissions', 'الصلاحيات') }}</legend>
         @for (permission of permissions(); track permission.id) {
           <label>
             <input
@@ -28,7 +37,7 @@
       </fieldset>
 
       <fieldset>
-        <legend>Pages</legend>
+        <legend>{{ i18n.pick('Pages', 'الصفحات') }}</legend>
         @for (page of pages(); track page.id) {
           <label>
             <input
@@ -42,13 +51,13 @@
       </fieldset>
 
       @if (editingId()) {
-        <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
+        <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> {{ i18n.pick('Active', 'نشط') }}</label>
       }
 
       <div class="form-actions">
-        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? 'Update' : t('COMMON.SAVE')" />
+        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
         @if (editingId()) {
-          <app-icon-button icon="close" label="Cancel" (pressed)="cancelEdit()" />
+          <app-icon-button icon="close" [label]="i18n.pick('Cancel', 'إلغاء')" (pressed)="cancelEdit()" />
         }
       </div>
     </form>
@@ -58,14 +67,14 @@
     @for (role of roles(); track role.id) {
       <li>
         <div>
-          <strong>{{ role.code }}</strong> — {{ role.nameEn }}
-          <div>Permissions: {{ role.permissions.join(', ') }}</div>
-          <div>Pages: {{ role.pages.join(', ') }}</div>
+          <strong>{{ role.code }}</strong> — {{ i18n.pick(role.nameEn, role.nameAr || role.nameEn) }}
+          <div>{{ i18n.pick('Permissions', 'الصلاحيات') }}: {{ role.permissions.join(', ') }}</div>
+          <div>{{ i18n.pick('Pages', 'الصفحات') }}: {{ role.pages.join(', ') }}</div>
         </div>
         @if (auth.hasPermission('Role.Manage')) {
           <div class="actions">
-            <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(role)" />
-            <app-icon-button icon="delete" tone="danger" label="Delete" (pressed)="remove(role)" />
+            <app-icon-button icon="edit" [label]="i18n.pick('Edit', 'تعديل')" (pressed)="startEdit(role)" />
+            <app-icon-button icon="delete" tone="danger" [label]="i18n.pick('Delete', 'حذف')" (pressed)="remove(role)" />
           </div>
         }
       </li>

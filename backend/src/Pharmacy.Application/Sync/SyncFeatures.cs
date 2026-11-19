@@ -1,3 +1,4 @@
+using Pharmacy.Shared.Localization;
 using System.Text.Json;
 using FluentValidation;
 using MediatR;
@@ -138,7 +139,7 @@ public sealed class PushSyncCommandHandler(IPharmacyDbContext db, ISender sender
                 var message = ex is ValidationException ve
                     ? string.Join("; ", ve.Errors.Select(e => e.ErrorMessage))
                     : ex is DbUpdateException ? "Could not be saved (conflict)." : ex.Message;
-                results.Add(new SyncOperationResult(op.OpId, "failed", null, null, [], message));
+                results.Add(new SyncOperationResult(op.OpId, "failed", null, null, [], ErrorMessages.Localize(message)));
             }
         }
 
@@ -155,7 +156,7 @@ public sealed class PushSyncCommandHandler(IPharmacyDbContext db, ISender sender
                 var command = Deserialize<CreateSaleCommand>(op) with { DeviceId = request.DeviceId };
                 var result = await sender.Send(command, ct);
                 return new SyncOperationResult(op.OpId, result.AlreadyExisted ? "duplicate" : "applied",
-                    result.Id, result.Number, result.Warnings, null);
+                    result.Id, result.Number, ErrorMessages.LocalizeAll(result.Warnings), null);
             }
             case SyncOperationTypes.CustomerCreate:
             {
@@ -170,7 +171,7 @@ public sealed class PushSyncCommandHandler(IPharmacyDbContext db, ISender sender
                 var command = Deserialize<CreateCustomerPaymentCommand>(op) with { DeviceId = request.DeviceId };
                 var result = await sender.Send(command, ct);
                 return new SyncOperationResult(op.OpId, result.AlreadyExisted ? "duplicate" : "applied",
-                    result.Id, result.Number, result.Warnings, null);
+                    result.Id, result.Number, ErrorMessages.LocalizeAll(result.Warnings), null);
             }
             case SyncOperationTypes.ProductCreate:
             {

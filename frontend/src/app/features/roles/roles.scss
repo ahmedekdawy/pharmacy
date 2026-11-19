@@ -39,7 +39,7 @@ fieldset {
   gap: 0.35rem;
 }
 
-label {
+label:not(.field) {
   display: flex;
   gap: 0.5rem;
   align-items: center;

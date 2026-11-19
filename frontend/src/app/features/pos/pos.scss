@@ -18,8 +18,9 @@ input, select {
 }
 button { cursor: pointer; }
 
-.bar { display: flex; gap: .5rem; align-items: center; margin-bottom: .6rem; }
-.bar select { flex: 1; }
+.bar { display: flex; gap: .5rem; align-items: flex-end; margin-bottom: .6rem; }
+.bar .branch { flex: 1; }
+.search-label { display: block; font-size: .85rem; font-weight: 600; color: var(--muted); margin-bottom: .3rem; }
 .net {
   font-size: .8rem; padding: .3rem .6rem; border-radius: 999px; white-space: nowrap;
   background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent-strong);
@@ -95,7 +96,7 @@ button { cursor: pointer; }
   button { width: 100%; text-align: start; background: none; border: 0; padding: .5rem; small { color: var(--muted); } }
   li + li { border-top: 1px solid var(--border); }
 }
-.new-cust { display: grid; grid-template-columns: 1fr 1fr auto; gap: .4rem; }
+.new-cust { display: grid; grid-template-columns: 1fr 1fr auto; gap: .4rem; align-items: end; }
 
 .totals .row {
   display: flex; justify-content: space-between; align-items: center; gap: .5rem;
