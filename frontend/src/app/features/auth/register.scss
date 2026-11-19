@@ -72,3 +72,11 @@ button:disabled {
   font-size: 0.9rem;
   text-align: center;
 }
+
+input.ng-invalid.ng-touched {
+  border-color: #c45c4a;
+}
+
+.error {
+  white-space: pre-line;
+}

@@ -7,6 +7,9 @@ namespace Pharmacy.Api.Middleware;
 
 public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
+    // Match the casing the controllers use (camelCase) so clients can read `errors`.
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -37,6 +40,6 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
         var payload = ApiResponse<object>.Fail(errors);
-        await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions));
     }
 }

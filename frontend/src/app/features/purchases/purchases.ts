@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface Named { id: string; nameEn: string; code?: string; }
@@ -104,7 +105,7 @@ export class PurchasesPage implements OnInit {
       }]
     }).subscribe({
       next: () => { this.form.patchValue({ batchNumber: '', quantity: 1, unitCost: 0, expiryDate: '' }); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Receive failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Receive failed'))
     });
   }
 }

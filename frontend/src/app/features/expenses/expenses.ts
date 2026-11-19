@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface Named { id: string; nameEn: string; }
@@ -117,7 +118,7 @@ export class ExpensesPage implements OnInit {
       : this.http.post(`${environment.apiBaseUrl}/expenses`, body);
     req$.subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Save failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
     });
   }
 
@@ -125,7 +126,7 @@ export class ExpensesPage implements OnInit {
     if (!confirm(`Delete expense ${item.category}?`)) return;
     this.http.delete(`${environment.apiBaseUrl}/expenses/${item.id}`).subscribe({
       next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
     });
   }
 }

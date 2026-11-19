@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface SettingDto { key: string; value: string; }
@@ -80,7 +81,7 @@ export class SettingsPage implements OnInit {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.http.put(`${environment.apiBaseUrl}/settings`, this.form.getRawValue()).subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Save failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
     });
   }
 
@@ -88,7 +89,7 @@ export class SettingsPage implements OnInit {
     if (!confirm(`Delete setting ${item.key}?`)) return;
     this.http.delete(`${environment.apiBaseUrl}/settings/${encodeURIComponent(item.key)}`).subscribe({
       next: () => { if (this.editingKey() === item.key) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
     });
   }
 }

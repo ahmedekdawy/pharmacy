@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface StockItem {
@@ -107,7 +108,7 @@ export class InventoryPage implements OnInit {
         this.form.patchValue({ batchNumber: '', quantity: 1, purchasePrice: 0, expiryDate: '' });
         this.reload();
       },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Opening balance failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Opening balance failed'))
     });
   }
 
@@ -120,7 +121,7 @@ export class InventoryPage implements OnInit {
       notes: null
     }).subscribe({
       next: () => { this.transferForm.patchValue({ quantity: 1 }); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Transfer failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Transfer failed'))
     });
   }
 
@@ -135,7 +136,7 @@ export class InventoryPage implements OnInit {
       reason: v.reason || null
     }).subscribe({
       next: () => { this.adjustForm.patchValue({ quantityDelta: 1, reason: '' }); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Adjust failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Adjust failed'))
     });
   }
 }

@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface Named { id: string; nameEn: string; }
@@ -91,7 +92,7 @@ export class CashShiftsPage implements OnInit {
       notes: null
     }).subscribe({
       next: () => { this.openForm.patchValue({ openingCash: 0 }); this.reload(); },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Open failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Open failed'))
     });
   }
 
@@ -106,7 +107,7 @@ export class CashShiftsPage implements OnInit {
       notes: null
     }).subscribe({
       next: () => this.reload(),
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Close failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Close failed'))
     });
   }
 }

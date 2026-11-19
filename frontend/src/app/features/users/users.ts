@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { apiErrorMessage } from '../../core/http-error';
 
 interface ApiResponse<T> {
   data: T;
@@ -131,7 +132,7 @@ export class UsersPage implements OnInit {
             this.startCreate();
             this.reload();
           },
-          error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Update failed')
+          error: (err) => this.error.set(apiErrorMessage(err, 'Update failed'))
         });
       return;
     }
@@ -151,7 +152,7 @@ export class UsersPage implements OnInit {
           this.startCreate();
           this.reload();
         },
-        error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Create failed')
+        error: (err) => this.error.set(apiErrorMessage(err, 'Create failed'))
       });
   }
 
@@ -159,7 +160,7 @@ export class UsersPage implements OnInit {
     const action = isActive ? 'activate' : 'deactivate';
     this.http.post(`${environment.apiBaseUrl}/users/${user.id}/${action}`, {}).subscribe({
       next: () => this.reload(),
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Update failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Update failed'))
     });
   }
 
@@ -174,7 +175,7 @@ export class UsersPage implements OnInit {
         }
         this.reload();
       },
-      error: (err) => this.error.set(err?.error?.errors?.[0] ?? 'Delete failed')
+      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
     });
   }
 }

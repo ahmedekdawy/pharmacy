@@ -73,6 +73,7 @@ export class AuthService {
             throw new Error(res.errors?.[0] ?? 'Login failed');
           }
           this.persist(res.data);
+          this.tenantService.setLastTenantCode(res.data.tenantCode ?? tenantCode);
         })
       );
   }

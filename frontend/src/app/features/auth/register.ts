@@ -4,11 +4,13 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { FieldError } from '../../shared/ui/field-error';
+import { apiErrorMessage } from '../../core/http-error';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, IconButton],
+  imports: [ReactiveFormsModule, RouterLink, IconButton, FieldError],
   templateUrl: './register.html',
   styleUrl: './register.scss'
 })
@@ -21,14 +23,14 @@ export class Register {
   readonly loading = signal(false);
 
   readonly form = this.fb.group({
-    tenantNameEn: ['', Validators.required],
-    tenantNameAr: ['', Validators.required],
-    tenantCode: ['', Validators.required],
-    adminFullNameEn: ['', Validators.required],
-    adminFullNameAr: ['', Validators.required],
-    adminEmail: ['', [Validators.required, Validators.email]],
-    adminPhoneNumber: [''],
-    adminPassword: ['', [Validators.required, Validators.minLength(8)]]
+    tenantNameEn: ['', [Validators.required, Validators.maxLength(256)]],
+    tenantNameAr: ['', [Validators.required, Validators.maxLength(256)]],
+    tenantCode: ['', [Validators.required, Validators.maxLength(64)]],
+    adminFullNameEn: ['', [Validators.required, Validators.maxLength(256)]],
+    adminFullNameAr: ['', [Validators.required, Validators.maxLength(256)]],
+    adminEmail: ['', [Validators.required, Validators.email, Validators.maxLength(256)]],
+    adminPhoneNumber: ['', [Validators.maxLength(32)]],
+    adminPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(256)]]
   });
 
   t(key: string): string {
@@ -63,11 +65,7 @@ export class Register {
         },
         error: (err) => {
           this.loading.set(false);
-          const message =
-            err?.error?.errors?.[0] ??
-            err?.message ??
-            'Registration failed';
-          this.error.set(message);
+          this.error.set(apiErrorMessage(err, 'Registration failed'));
         }
       });
   }
