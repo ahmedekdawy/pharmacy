@@ -80,8 +80,11 @@ public sealed class GetDashboardQueryHandler(IPharmacyDbContext db, ICurrentTena
     {
         if (!currentTenant.IsResolved) throw new InvalidOperationException("Tenant is required.");
 
-        var todayStart = DateTimeOffset.UtcNow.Date;
-        var monthStart = new DateTimeOffset(todayStart.Year, todayStart.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        // Keep offsets at UTC: `DateTimeOffset.UtcNow.Date` is a DateTime that converts back using the
+        // server's local offset, which Npgsql rejects for timestamptz ("only offset 0 (UTC) is supported").
+        var now = DateTimeOffset.UtcNow;
+        var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+        var monthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
         var expiryLimit = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(90));
 
         var productCount = await db.Products.AsNoTracking().CountAsync(x => x.IsActive, cancellationToken);
