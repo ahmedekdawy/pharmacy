@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { environment } from '../../../environments/environment';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface AuditLogDto {
@@ -15,14 +16,14 @@ interface AuditLogDto {
   imports: [DatePipe],
   template: `
   <section class="page">
-    <h1>Audit Logs</h1>
+    <h1>{{ i18n.pick('Audit Logs', 'سجل التدقيق') }}</h1>
     @if (error()) { <p class="error">{{ error() }}</p> }
     <ul>
       @for (item of items(); track item.id) {
         <li>
           <div>
             <strong>{{ item.action }}</strong> · {{ item.entityType }}
-            <span>{{ item.userEmail || 'system' }} · {{ item.createdAt | date:'short' }}</span>
+            <span>{{ item.userEmail || i18n.pick('system', 'النظام') }} · {{ item.createdAt | date:'short' }}</span>
           </div>
           @if (item.newValues) { <pre>{{ item.newValues }}</pre> }
         </li>
@@ -41,13 +42,14 @@ interface AuditLogDto {
 })
 export class AuditPage implements OnInit {
   private readonly http = inject(HttpClient);
+  readonly i18n = inject(LocalizationService);
   readonly items = signal<AuditLogDto[]>([]);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
     this.http.get<ApiResponse<AuditLogDto[]>>(`${environment.apiBaseUrl}/audit-logs`, { params: { take: 100 } }).subscribe({
       next: (res) => this.items.set(res.data ?? []),
-      error: () => this.error.set('Unable to load audit logs.')
+      error: () => this.error.set(this.i18n.pick('Unable to load audit logs.', 'تعذر تحميل سجل التدقيق.'))
     });
   }
 }

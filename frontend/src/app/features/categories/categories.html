@@ -1,17 +1,23 @@
 <section class="page">
-  <h1>Categories</h1>
+  <h1>{{ i18n.pick('Categories', 'التصنيفات') }}</h1>
   @if (error()) { <p class="error">{{ error() }}</p> }
   @if (auth.hasPermission('Category.Manage')) {
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <input formControlName="nameEn" placeholder="Name EN" />
-      <input formControlName="nameAr" placeholder="Name AR" />
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Name (English)', 'الاسم (إنجليزي)') }} <span class="req">*</span></span>
+        <input formControlName="nameEn" [placeholder]="i18n.pick('Name in English', 'الاسم بالإنجليزية')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Name (Arabic)', 'الاسم (عربي)') }} <span class="req">*</span></span>
+        <input formControlName="nameAr" [placeholder]="i18n.pick('Name in Arabic', 'الاسم بالعربية')" />
+      </label>
       @if (editingId()) {
-        <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> Active</label>
+        <label class="active-toggle"><input type="checkbox" formControlName="isActive" /> {{ i18n.pick('Active', 'نشط') }}</label>
       }
       <div class="form-actions">
-        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? 'Update' : 'Save'" />
+        <app-icon-button icon="save" type="submit" tone="primary" [label]="editingId() ? i18n.pick('Update', 'تحديث') : i18n.pick('Save', 'حفظ')" />
         @if (editingId()) {
-          <app-icon-button icon="close" label="Cancel" (pressed)="cancelEdit()" />
+          <app-icon-button icon="close" [label]="i18n.pick('Cancel', 'إلغاء')" (pressed)="cancelEdit()" />
         }
       </div>
     </form>
@@ -22,8 +28,8 @@
         <div><strong>{{ item.nameEn }}</strong> / {{ item.nameAr }}</div>
         @if (auth.hasPermission('Category.Manage')) {
           <div class="actions">
-            <app-icon-button icon="edit" label="Edit" (pressed)="startEdit(item)" />
-            <app-icon-button icon="delete" tone="danger" label="Delete" (pressed)="remove(item)" />
+            <app-icon-button icon="edit" [label]="i18n.pick('Edit', 'تعديل')" (pressed)="startEdit(item)" />
+            <app-icon-button icon="delete" tone="danger" [label]="i18n.pick('Delete', 'حذف')" (pressed)="remove(item)" />
           </div>
         }
       </li>

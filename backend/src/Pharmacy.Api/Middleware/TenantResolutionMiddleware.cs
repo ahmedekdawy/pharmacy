@@ -1,5 +1,6 @@
 using Pharmacy.Infrastructure.Identity;
 using Pharmacy.Infrastructure.Tenancy;
+using Pharmacy.Shared.Localization;
 
 namespace Pharmacy.Api.Middleware;
 
@@ -27,7 +28,7 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
             suppliedTenant != resolved)
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("Tenant header does not match token tenant.");
+            await context.Response.WriteAsync(ErrorMessages.Localize("Tenant header does not match token tenant."));
             return;
         }
 

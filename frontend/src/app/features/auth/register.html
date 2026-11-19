@@ -1,46 +1,46 @@
 <section class="register">
   <a routerLink="/" class="brand">{{ t('BRAND.NAME') }}</a>
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <h1>Register your pharmacy</h1>
+    <h1>{{ i18n.pick('Register your pharmacy', 'سجّل صيدليتك') }}</h1>
     <label>
-      Pharmacy Name (English) *
+      {{ i18n.pick('Pharmacy Name (English)', 'اسم الصيدلية (إنجليزي)') }} <span class="req">*</span>
       <input formControlName="tenantNameEn" autocomplete="organization" />
-      <app-field-error [control]="form.controls.tenantNameEn" label="Pharmacy name (English)" />
+      <app-field-error [control]="form.controls.tenantNameEn" [label]="i18n.pick('Pharmacy name (English)', 'اسم الصيدلية (إنجليزي)')" />
     </label>
     <label>
-      Pharmacy Name (Arabic) *
+      {{ i18n.pick('Pharmacy Name (Arabic)', 'اسم الصيدلية (عربي)') }} <span class="req">*</span>
       <input formControlName="tenantNameAr" dir="rtl" />
-      <app-field-error [control]="form.controls.tenantNameAr" label="Pharmacy name (Arabic)" />
+      <app-field-error [control]="form.controls.tenantNameAr" [label]="i18n.pick('Pharmacy name (Arabic)', 'اسم الصيدلية (عربي)')" />
     </label>
     <label>
-      Tenant Code *
+      {{ i18n.pick('Tenant Code', 'كود الصيدلية') }} <span class="req">*</span>
       <input formControlName="tenantCode" autocomplete="off" />
-      <app-field-error [control]="form.controls.tenantCode" label="Tenant code" />
+      <app-field-error [control]="form.controls.tenantCode" [label]="i18n.pick('Tenant code', 'كود الصيدلية')" />
     </label>
     <label>
-      Admin Full Name (English) *
+      {{ i18n.pick('Admin Full Name (English)', 'اسم المسؤول (إنجليزي)') }} <span class="req">*</span>
       <input formControlName="adminFullNameEn" autocomplete="name" />
-      <app-field-error [control]="form.controls.adminFullNameEn" label="Admin full name (English)" />
+      <app-field-error [control]="form.controls.adminFullNameEn" [label]="i18n.pick('Admin full name (English)', 'اسم المسؤول (إنجليزي)')" />
     </label>
     <label>
-      Admin Full Name (Arabic) *
+      {{ i18n.pick('Admin Full Name (Arabic)', 'اسم المسؤول (عربي)') }} <span class="req">*</span>
       <input formControlName="adminFullNameAr" dir="rtl" />
-      <app-field-error [control]="form.controls.adminFullNameAr" label="Admin full name (Arabic)" />
+      <app-field-error [control]="form.controls.adminFullNameAr" [label]="i18n.pick('Admin full name (Arabic)', 'اسم المسؤول (عربي)')" />
     </label>
     <label>
-      Admin Email *
+      {{ i18n.pick('Admin Email', 'البريد الإلكتروني للمسؤول') }} <span class="req">*</span>
       <input type="email" formControlName="adminEmail" autocomplete="username" />
-      <app-field-error [control]="form.controls.adminEmail" label="Admin email" />
+      <app-field-error [control]="form.controls.adminEmail" [label]="i18n.pick('Admin email', 'البريد الإلكتروني للمسؤول')" />
     </label>
     <label>
-      Admin Mobile (optional, lets the admin also log in by mobile)
+      {{ i18n.pick('Admin Mobile (optional, lets the admin also log in by mobile)', 'موبايل المسؤول (اختياري، يتيح الدخول برقم الموبايل)') }}
       <input type="tel" formControlName="adminPhoneNumber" autocomplete="tel" />
-      <app-field-error [control]="form.controls.adminPhoneNumber" label="Admin mobile" />
+      <app-field-error [control]="form.controls.adminPhoneNumber" [label]="i18n.pick('Admin mobile', 'موبايل المسؤول')" />
     </label>
     <label>
-      Admin Password *
+      {{ i18n.pick('Admin Password', 'كلمة مرور المسؤول') }} <span class="req">*</span>
       <input type="password" formControlName="adminPassword" autocomplete="new-password" />
-      <app-field-error [control]="form.controls.adminPassword" label="Admin password" />
+      <app-field-error [control]="form.controls.adminPassword" [label]="i18n.pick('Admin password', 'كلمة مرور المسؤول')" />
     </label>
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
@@ -50,8 +50,8 @@
       type="submit"
       tone="primary"
       [disabled]="loading()"
-      label="Create pharmacy"
+      [label]="i18n.pick('Create pharmacy', 'إنشاء الصيدلية')"
     ></app-icon-button>
-    <p class="switch">Already have an account? <a routerLink="/login">Log in</a></p>
+    <p class="switch">{{ i18n.pick('Already have an account?', 'لديك حساب بالفعل؟') }} <a routerLink="/login">{{ i18n.pick('Log in', 'تسجيل الدخول') }}</a></p>
   </form>
 </section>

@@ -1,3 +1,4 @@
+using Pharmacy.Shared.Localization;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -292,7 +293,7 @@ public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTena
 
         db.Sales.Add(sale);
         await db.SaveChangesAsync(cancellationToken);
-        return new CreateSaleResult(sale.Id, sale.Number, sale.TotalAmount, sale.DueAmount, false, warnings);
+        return new CreateSaleResult(sale.Id, sale.Number, sale.TotalAmount, sale.DueAmount, false, ErrorMessages.LocalizeAll(warnings));
     }
 
     /// <summary>

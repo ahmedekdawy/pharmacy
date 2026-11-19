@@ -24,8 +24,11 @@ interface Statement { customerId: string; code: string; nameEn: string; nameAr: 
       <div class="total">{{ pick('Total outstanding', 'إجمالي المديونيات') }}: <b>{{ totalDebt() | number: '1.2-2' }}</b></div>
     </header>
 
-    <input class="search" type="search" [value]="query()" (input)="query.set($any($event.target).value)"
-      [placeholder]="pick('Search name, code or phone', 'ابحث بالاسم أو الكود أو الهاتف')" />
+    <label class="field">
+      <span class="field-label">{{ pick('Search', 'بحث') }}</span>
+      <input class="search" type="search" [value]="query()" (input)="query.set($any($event.target).value)"
+        [placeholder]="pick('Search name, code or phone', 'ابحث بالاسم أو الكود أو الهاتف')" />
+    </label>
     <label class="toggle"><input type="checkbox" [checked]="showAll()" (change)="showAll.set($any($event.target).checked)" /> {{ pick('Show all customers', 'عرض كل العملاء') }}</label>
 
     @if (message()) {
@@ -56,13 +59,22 @@ interface Statement { customerId: string; code: string; nameEn: string; nameAr: 
 
           @if (paying()?.id === c.id) {
             <form class="pay" (submit)="$event.preventDefault(); collect(c)">
-              <input type="number" min="0.01" step="0.01" inputmode="decimal" [value]="amount()" (input)="amount.set(+$any($event.target).value)" required />
-              <select [value]="method()" (change)="method.set($any($event.target).value)">
-                <option value="Cash">{{ pick('Cash', 'نقدي') }}</option>
-                <option value="Card">{{ pick('Card', 'فيزا') }}</option>
-                <option value="Wallet">{{ pick('Wallet', 'محفظة') }}</option>
-              </select>
-              <input [value]="notes()" (input)="notes.set($any($event.target).value)" [placeholder]="pick('Notes', 'ملاحظات')" />
+              <label class="field">
+                <span class="field-label">{{ pick('Amount', 'المبلغ') }} <span class="req">*</span></span>
+                <input type="number" min="0.01" step="0.01" inputmode="decimal" [value]="amount()" (input)="amount.set(+$any($event.target).value)" required />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ pick('Payment method', 'طريقة الدفع') }}</span>
+                <select [value]="method()" (change)="method.set($any($event.target).value)">
+                  <option value="Cash">{{ pick('Cash', 'نقدي') }}</option>
+                  <option value="Card">{{ pick('Card', 'فيزا') }}</option>
+                  <option value="Wallet">{{ pick('Wallet', 'محفظة') }}</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">{{ pick('Notes', 'ملاحظات') }}</span>
+                <input [value]="notes()" (input)="notes.set($any($event.target).value)" [placeholder]="pick('Notes', 'ملاحظات')" />
+              </label>
               <button type="submit" class="btn primary" [disabled]="busy()">{{ pick('Save', 'حفظ') }}</button>
               <button type="button" class="btn" (click)="paying.set(null)">{{ pick('Cancel', 'إلغاء') }}</button>
             </form>
@@ -79,7 +91,7 @@ interface Statement { customerId: string; code: string; nameEn: string; nameAr: 
           <header class="head">
             <h2>{{ pick('Account statement', 'كشف حساب') }} — {{ lang() === 'ar' ? s.nameAr : s.nameEn }}</h2>
             <button type="button" class="btn" (click)="printStatement(s)">{{ pick('Print', 'طباعة') }}</button>
-            <button type="button" class="btn" (click)="statement.set(null)">×</button>
+            <button type="button" class="btn" (click)="statement.set(null)" [attr.aria-label]="pick('Close', 'إغلاق')">×</button>
           </header>
           <div class="table-wrap">
             <table>
@@ -120,7 +132,7 @@ interface Statement { customerId: string; code: string; nameEn: string; nameAr: 
     .who { display:flex; flex-direction:column; gap:.15rem; small { color:var(--muted); } a { color:inherit; } }
     .bal { font-size:1.1rem; &.debt { color:#b5462f; } }
     .actions { display:flex; gap:.4rem; }
-    .pay { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr)); gap:.4rem; }
+    .pay { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr)); gap:.4rem; align-items:end; }
     .btn { border:1px solid var(--border); background:var(--surface-muted); color:var(--text); border-radius:.45rem; padding:.5rem .8rem; font:inherit; cursor:pointer; }
     .btn.primary { background:var(--accent); color:#fff; border-color:transparent; }
     .btn:disabled { opacity:.5; }

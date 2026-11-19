@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using Pharmacy.Shared.Localization;
 using Pharmacy.Shared.Results;
 
 namespace Pharmacy.Api.Middleware;
@@ -39,7 +40,8 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
     {
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
-        var payload = ApiResponse<object>.Fail(errors);
+        // Request culture comes from Accept-Language (see UseRequestLocalization in Program.cs).
+        var payload = ApiResponse<object>.Fail(errors.Select(ErrorMessages.Localize).ToArray());
         await context.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions));
     }
 }

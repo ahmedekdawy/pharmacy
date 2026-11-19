@@ -9,21 +9,39 @@
 
   @if (auth.hasPermission(editingId() ? 'User.Edit' : 'User.Create')) {
     <form class="editor" [formGroup]="form" (ngSubmit)="submit()">
-      <input formControlName="email" placeholder="Email" />
-      <input formControlName="phoneNumber" type="tel" placeholder="Mobile (optional)" />
-      <input formControlName="password" type="password" [placeholder]="editingId() ? 'New password (optional)' : 'Password'" />
-      <input formControlName="fullNameEn" placeholder="Name EN" />
-      <input formControlName="fullNameAr" placeholder="Name AR" />
-      <select formControlName="roleId">
-        <option value="">No role</option>
-        @for (role of roles(); track role.id) {
-          <option [value]="role.id">{{ role.nameEn }}</option>
-        }
-      </select>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Email', 'البريد الإلكتروني') }} <span class="req">*</span></span>
+        <input formControlName="email" [placeholder]="i18n.pick('Email', 'البريد الإلكتروني')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Mobile', 'الموبايل') }}</span>
+        <input formControlName="phoneNumber" type="tel" [placeholder]="i18n.pick('Mobile (optional)', 'الموبايل (اختياري)')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Password', 'كلمة المرور') }} @if (!editingId()) {<span class="req">*</span>}</span>
+        <input formControlName="password" type="password" [placeholder]="editingId() ? i18n.pick('New password (optional)', 'كلمة مرور جديدة (اختياري)') : i18n.pick('Password', 'كلمة المرور')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Name (English)', 'الاسم (إنجليزي)') }} <span class="req">*</span></span>
+        <input formControlName="fullNameEn" [placeholder]="i18n.pick('Name in English', 'الاسم بالإنجليزية')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Name (Arabic)', 'الاسم (عربي)') }} <span class="req">*</span></span>
+        <input formControlName="fullNameAr" [placeholder]="i18n.pick('Name in Arabic', 'الاسم بالعربية')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Role', 'الدور') }}</span>
+        <select formControlName="roleId">
+          <option value="">{{ i18n.pick('No role', 'بدون دور') }}</option>
+          @for (role of roles(); track role.id) {
+            <option [value]="role.id">{{ i18n.pick(role.nameEn, role.nameAr || role.nameEn) }}</option>
+          }
+        </select>
+      </label>
       @if (editingId()) {
         <label class="active-toggle">
           <input type="checkbox" formControlName="isActive" />
-          Active
+          {{ i18n.pick('Active', 'نشط') }}
         </label>
       }
       <div class="form-actions">
@@ -31,10 +49,10 @@
           icon="save"
           type="submit"
           tone="primary"
-          [label]="editingId() ? 'Update user' : 'Create user'"
+          [label]="editingId() ? i18n.pick('Update user', 'تحديث المستخدم') : i18n.pick('Create user', 'إنشاء مستخدم')"
         />
         @if (editingId()) {
-          <app-icon-button icon="close" label="Cancel edit" (pressed)="cancelEdit()" />
+          <app-icon-button icon="close" [label]="i18n.pick('Cancel edit', 'إلغاء التعديل')" (pressed)="cancelEdit()" />
         }
       </div>
     </form>
@@ -44,24 +62,24 @@
     @for (user of users(); track user.id) {
       <li>
         <div>
-          <strong>{{ user.fullNameEn }}</strong>
+          <strong>{{ i18n.pick(user.fullNameEn, user.fullNameAr || user.fullNameEn) }}</strong>
           <span>{{ user.email }}</span>
           @if (user.phoneNumber) {
             <span>{{ user.phoneNumber }}</span>
           }
           <span>{{ user.roles.join(', ') }}</span>
-          <em>{{ user.isActive ? 'Active' : 'Inactive' }}</em>
+          <em>{{ user.isActive ? i18n.pick('Active', 'نشط') : i18n.pick('Inactive', 'غير نشط') }}</em>
         </div>
         <div class="actions">
           @if (auth.hasPermission('User.Edit')) {
-            <app-icon-button icon="edit" label="Edit user" (pressed)="startEdit(user)" />
-            <app-icon-button icon="delete" tone="danger" label="Delete user" (pressed)="remove(user)" />
+            <app-icon-button icon="edit" [label]="i18n.pick('Edit user', 'تعديل المستخدم')" (pressed)="startEdit(user)" />
+            <app-icon-button icon="delete" tone="danger" [label]="i18n.pick('Delete user', 'حذف المستخدم')" (pressed)="remove(user)" />
           }
           @if (auth.hasPermission('User.Activate')) {
             @if (!user.isActive) {
-              <app-icon-button icon="check" tone="success" label="Activate" (pressed)="setActive(user, true)" />
+              <app-icon-button icon="check" tone="success" [label]="i18n.pick('Activate', 'تفعيل')" (pressed)="setActive(user, true)" />
             } @else {
-              <app-icon-button icon="ban" tone="danger" label="Deactivate" (pressed)="setActive(user, false)" />
+              <app-icon-button icon="ban" tone="danger" [label]="i18n.pick('Deactivate', 'إيقاف')" (pressed)="setActive(user, false)" />
             }
           }
         </div>

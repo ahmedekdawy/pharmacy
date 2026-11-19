@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
 import { apiErrorMessage } from '../../core/http-error';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface NamedDto { id: string; nameEn: string; nameAr: string; isActive: boolean; }
@@ -20,6 +21,7 @@ export class CategoriesPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
+  readonly i18n = inject(LocalizationService);
   readonly items = signal<NamedDto[]>([]);
   readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -34,7 +36,7 @@ export class CategoriesPage implements OnInit {
   reload(): void {
     this.http.get<ApiResponse<NamedDto[]>>(`${environment.apiBaseUrl}/categories`).subscribe({
       next: (res) => this.items.set(res.data ?? []),
-      error: () => this.error.set('Unable to load categories.')
+      error: () => this.error.set(this.i18n.pick('Unable to load categories.', 'تعذر تحميل التصنيفات.'))
     });
   }
 
@@ -57,15 +59,15 @@ export class CategoriesPage implements OnInit {
       : this.http.post(`${environment.apiBaseUrl}/categories`, body);
     req$.subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Save failed', 'فشل الحفظ')))
     });
   }
 
   remove(item: NamedDto): void {
-    if (!confirm(`Delete ${item.nameEn}?`)) return;
+    if (!confirm(this.i18n.pick(`Delete ${item.nameEn}?`, `حذف ${item.nameAr}؟`))) return;
     this.http.delete(`${environment.apiBaseUrl}/categories/${item.id}`).subscribe({
       next: () => { if (this.editingId() === item.id) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Delete failed', 'فشل الحذف')))
     });
   }
 }

@@ -58,7 +58,7 @@ export class RolesPage implements OnInit {
   reload(): void {
     this.http.get<ApiResponse<RoleDto[]>>(`${environment.apiBaseUrl}/roles`).subscribe({
       next: (res) => this.roles.set(res.data ?? []),
-      error: () => this.error.set('Unable to load roles.')
+      error: () => this.error.set(this.i18n.pick('Unable to load roles.', 'تعذر تحميل الأدوار.'))
     });
   }
 
@@ -106,15 +106,15 @@ export class RolesPage implements OnInit {
       : this.http.post(`${environment.apiBaseUrl}/roles`, body);
     req$.subscribe({
       next: () => { this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Save failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Save failed', 'فشل الحفظ')))
     });
   }
 
   remove(role: RoleDto): void {
-    if (!confirm(`Delete role ${role.code}?`)) return;
+    if (!confirm(this.i18n.pick(`Delete role ${role.code}?`, `حذف الدور ${role.code}؟`))) return;
     this.http.delete(`${environment.apiBaseUrl}/roles/${role.id}`).subscribe({
       next: () => { if (this.editingId() === role.id) this.cancelEdit(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Delete failed', 'فشل الحذف')))
     });
   }
 }

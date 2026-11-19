@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { LocalizationService } from '../services/localization.service';
 import { localDb } from './local-db';
 import {
   LocalReceipt,
@@ -46,6 +47,7 @@ const REQUEST_TIMEOUT_MS = 20_000;
 @Injectable({ providedIn: 'root' })
 export class SyncService {
   private readonly http = inject(HttpClient);
+  private readonly i18n = inject(LocalizationService);
   private readonly base = environment.apiBaseUrl;
   private started = false;
   private syncPromise: Promise<void> | null = null;
@@ -137,7 +139,7 @@ export class SyncService {
       try {
         const [result] = await this.pushOps([op]);
         this.online.set(true);
-        if (result.status === 'failed') return { kind: 'rejected', error: result.error ?? 'Rejected' };
+        if (result.status === 'failed') return { kind: 'rejected', error: result.error ?? this.i18n.pick('Rejected by the server.', 'رفض الخادم العملية.') };
         this.applyLocalEffects(op);
         await this.persistSnapshot();
         return { kind: 'applied', result };
@@ -219,7 +221,7 @@ export class SyncService {
     } catch (err) {
       if (this.isAuthError(err)) {
         this.authExpired.set(true);
-        this.lastError.set('Session expired – please sign in again to sync.');
+        this.lastError.set(this.i18n.pick('Session expired – please sign in again to sync.', 'انتهت الجلسة – سجّل الدخول مرة أخرى لإتمام المزامنة.'));
       } else if (this.isNetworkError(err)) {
         this.online.set(false);
       } else {
@@ -403,8 +405,9 @@ export class SyncService {
   }
 
   private errorMessage(err: unknown): string {
-    if (err instanceof HttpErrorResponse) return err.error?.errors?.[0] ?? err.message;
-    return (err as Error)?.message ?? 'Unexpected error';
+    const fallback = this.i18n.pick('Unexpected error.', 'حدث خطأ غير متوقع.');
+    if (err instanceof HttpErrorResponse) return err.error?.errors?.[0] ?? fallback;
+    return (err as Error)?.message ?? fallback;
   }
 
   private resolveDeviceId(): string {

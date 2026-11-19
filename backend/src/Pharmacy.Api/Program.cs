@@ -58,6 +58,17 @@ try
         app.UsePathBase(pathBase);
     }
 
+    // Culture from Accept-Language (frontend sends the UI language). Must run before the
+    // exception handler so error messages are written in the request's language.
+    // Only the UI culture (message language) varies; formatting culture stays "en" so numbers
+    // and dates are parsed/formatted the same way regardless of language.
+    app.UseRequestLocalization(options =>
+    {
+        options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture(culture: "en", uiCulture: "ar");
+        options.AddSupportedCultures("en");
+        options.AddSupportedUICultures("ar", "en");
+    });
+
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging();
 

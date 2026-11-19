@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { IconButton } from '../../shared/ui/icon-button';
 import { apiErrorMessage } from '../../core/http-error';
+import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface SaleDto { id: string; number: string; locationNameEn: string; totalAmount: number; }
@@ -21,17 +22,20 @@ interface ReturnDto { id: string; number: string; saleNumber: string; locationNa
   imports: [ReactiveFormsModule, IconButton],
   template: `
   <section class="page">
-    <h1>Sale Returns</h1>
+    <h1>{{ i18n.pick('Sale Returns', 'مرتجعات المبيعات') }}</h1>
     @if (error()) { <p class="error">{{ error() }}</p> }
     @if (auth.hasPermission('Sale.Return')) {
       <form [formGroup]="form" (ngSubmit)="loadSale()">
-        <select formControlName="saleId">
-          <option value="">Select sale</option>
-          @for (s of sales(); track s.id) {
-            <option [value]="s.id">{{ s.number }} — {{ s.totalAmount }}</option>
-          }
-        </select>
-        <app-icon-button icon="check" type="submit" tone="primary" label="Load sale" />
+        <label class="field">
+          <span class="field-label">{{ i18n.pick('Sale', 'الفاتورة') }} <span class="req">*</span></span>
+          <select formControlName="saleId">
+            <option value="">{{ i18n.pick('Select sale', 'اختر الفاتورة') }}</option>
+            @for (s of sales(); track s.id) {
+              <option [value]="s.id">{{ s.number }} — {{ s.totalAmount }}</option>
+            }
+          </select>
+        </label>
+        <app-icon-button icon="check" type="submit" tone="primary" [label]="i18n.pick('Load sale', 'تحميل الفاتورة')" />
       </form>
 
       @if (detail(); as d) {
@@ -41,9 +45,9 @@ interface ReturnDto { id: string; number: string; saleNumber: string; locationNa
             @for (item of d.items; track item.id) {
               <li>
                 {{ item.productCode }} — {{ item.productNameEn }}
-                (sold {{ item.quantity }}, returned {{ item.returnedQuantity }})
+                ({{ i18n.pick('sold', 'المباع') }} {{ item.quantity }}، {{ i18n.pick('returned', 'المرتجع') }} {{ item.returnedQuantity }})
                 @if (item.quantity > item.returnedQuantity) {
-                  <button type="button" class="link" (click)="returnItem(item)">Return remaining</button>
+                  <button type="button" class="link" (click)="returnItem(item)">{{ i18n.pick('Return remaining', 'إرجاع المتبقي') }}</button>
                 }
               </li>
             }
@@ -53,14 +57,14 @@ interface ReturnDto { id: string; number: string; saleNumber: string; locationNa
     }
     <ul>
       @for (item of items(); track item.id) {
-        <li><strong>{{ item.number }}</strong> for {{ item.saleNumber }} @ {{ item.locationNameEn }} = {{ item.totalAmount }}</li>
+        <li><strong>{{ item.number }}</strong> {{ i18n.pick('for', 'للفاتورة') }} {{ item.saleNumber }} &#64; {{ item.locationNameEn }} = {{ item.totalAmount }}</li>
       }
     </ul>
   </section>`,
   styles: [`
     :host { display:block; padding:1.5rem; color:var(--text); }
     .page { max-width:64rem; margin:0 auto; }
-    form { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center; }
+    form { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:end; }
     select { padding:.7rem .8rem; border-radius:.35rem; border:1px solid var(--border); font:inherit; background:var(--surface); color:var(--text); min-width:16rem; }
     ul { list-style:none; padding:0; } li { padding:.75rem 0; border-bottom:1px solid var(--border); }
     .link { margin-inline-start:.75rem; border:0; background:transparent; color:var(--accent-strong); cursor:pointer; font:inherit; text-decoration:underline; }
@@ -71,6 +75,7 @@ export class ReturnsPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
+  readonly i18n = inject(LocalizationService);
   readonly sales = signal<SaleDto[]>([]);
   readonly items = signal<ReturnDto[]>([]);
   readonly detail = signal<SaleDetail | null>(null);
@@ -87,7 +92,7 @@ export class ReturnsPage implements OnInit {
   reload(): void {
     this.http.get<ApiResponse<ReturnDto[]>>(`${environment.apiBaseUrl}/sale-returns`).subscribe({
       next: (res) => this.items.set(res.data ?? []),
-      error: () => this.error.set('Unable to load returns.')
+      error: () => this.error.set(this.i18n.pick('Unable to load returns.', 'تعذر تحميل المرتجعات.'))
     });
   }
 
@@ -96,7 +101,7 @@ export class ReturnsPage implements OnInit {
     const id = this.form.getRawValue().saleId!;
     this.http.get<ApiResponse<SaleDetail>>(`${environment.apiBaseUrl}/sales/${id}`).subscribe({
       next: (res) => this.detail.set(res.data),
-      error: (err) => this.error.set(apiErrorMessage(err, 'Load failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Load failed', 'فشل التحميل')))
     });
   }
 
@@ -111,7 +116,7 @@ export class ReturnsPage implements OnInit {
       items: [{ saleItemId: item.id, quantity: qty }]
     }).subscribe({
       next: () => { this.loadSale(); this.reload(); },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Return failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Return failed', 'فشل المرتجع')))
     });
   }
 }

@@ -32,8 +32,14 @@ interface SaleDetail {
     <header class="head">
       <h1>{{ pick('Invoices', 'الفواتير') }}</h1>
       <div class="filters">
-        <input type="date" [value]="from()" (change)="from.set($any($event.target).value); reload()" />
-        <input type="date" [value]="to()" (change)="to.set($any($event.target).value); reload()" />
+        <label class="field">
+          <span class="field-label">{{ pick('From', 'من') }}</span>
+          <input type="date" [value]="from()" (change)="from.set($any($event.target).value); reload()" />
+        </label>
+        <label class="field">
+          <span class="field-label">{{ pick('To', 'إلى') }}</span>
+          <input type="date" [value]="to()" (change)="to.set($any($event.target).value); reload()" />
+        </label>
         @if (auth.hasPermission('Sale.Create')) {
           <a routerLink="/app/pos" class="btn primary">{{ pick('Open POS', 'نقطة البيع') }}</a>
         }
@@ -52,7 +58,7 @@ interface SaleDetail {
           @for (s of items(); track s.id) {
             <tr [class.flag]="s.hasStockWarning">
               <td>{{ s.soldAt | date: 'yyyy-MM-dd HH:mm' }}</td>
-              <td>{{ s.number }} @if (s.source === 'Offline') { <span class="tag">offline</span> }</td>
+              <td>{{ s.number }} @if (s.source === 'Offline') { <span class="tag">{{ pick('offline', 'بدون إنترنت') }}</span> }</td>
               <td>{{ (lang() === 'ar' ? s.customerNameAr : s.customerNameEn) || pick('Walk-in', 'نقدي') }}</td>
               <td class="num">{{ s.totalAmount | number: '1.2-2' }}</td>
               <td class="num">{{ s.paidAmount | number: '1.2-2' }}</td>
@@ -68,7 +74,7 @@ interface SaleDetail {
     :host { display:block; padding:1rem; color:var(--text); }
     .page { max-width:72rem; margin:0 auto; display:grid; gap:.75rem; }
     .head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.6rem; } h1 { margin:0; }
-    .filters { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
+    .filters { display:flex; flex-wrap:wrap; gap:.4rem; align-items:flex-end; }
     input { padding:.55rem .7rem; border:1px solid var(--border); border-radius:.45rem; background:var(--surface); color:var(--text); font:inherit; }
     .btn { border:1px solid var(--border); background:var(--surface-muted); color:var(--text); border-radius:.45rem; padding:.45rem .8rem; font:inherit; cursor:pointer; text-decoration:none; }
     .btn.primary { background:var(--accent); color:#fff; border-color:transparent; }
@@ -123,7 +129,7 @@ export class SalesPage implements OnInit {
         };
         printHtml(receiptHtml(receipt, this.lang(), this.auth.user()?.tenantCode ?? ''), { title: d.number, dir: ar ? 'rtl' : 'ltr' });
       },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Error'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.pick('Unable to load the invoice for printing.', 'تعذر تحميل الفاتورة للطباعة.')))
     });
   }
 }

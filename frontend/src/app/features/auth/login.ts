@@ -62,7 +62,7 @@ export class Login {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(apiErrorMessage(err, 'Login failed'));
+        this.error.set(apiErrorMessage(err, this.i18n.pick('Login failed', 'فشل تسجيل الدخول')));
       }
     });
   }

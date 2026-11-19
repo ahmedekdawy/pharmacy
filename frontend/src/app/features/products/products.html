@@ -33,7 +33,7 @@
               <button type="button" (click)="selectDrug(drug)">
                 <strong>{{ drug.commercialNameEn }}</strong>
                 <span>{{ drug.commercialNameAr }}</span>
-                <small>{{ drug.scientificName }} · {{ drug.manufacturer }} · {{ drug.priceEgp | number: '1.2-2' }} EGP</small>
+                <small>{{ drug.scientificName }} · {{ drug.manufacturer }} · {{ drug.priceEgp | number: '1.2-2' }} {{ i18n.pick('EGP', 'ج.م') }}</small>
               </button>
             </li>
           }
@@ -60,22 +60,34 @@
       <p class="edit-hint">
         {{ editingId() ? t('PRODUCTS.EDITING') : t('PRODUCTS.EDIT_BEFORE_SAVE') }}
       </p>
-      <input formControlName="code" [placeholder]="t('PRODUCTS.CODE')" />
-      <input formControlName="nameEn" [placeholder]="t('PRODUCTS.NAME_EN')" />
-      <input formControlName="nameAr" [placeholder]="t('PRODUCTS.NAME_AR')" />
-      <input formControlName="barcode" [placeholder]="t('PRODUCTS.BARCODE')" />
       <label class="field">
-        <span>{{ i18n.pick('Box price', 'سعر العلبة') }}</span>
+        <span class="field-label">{{ t('PRODUCTS.CODE') }} <span class="req">*</span></span>
+        <input formControlName="code" [placeholder]="t('PRODUCTS.CODE')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ t('PRODUCTS.NAME_EN') }} <span class="req">*</span></span>
+        <input formControlName="nameEn" [placeholder]="t('PRODUCTS.NAME_EN')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ t('PRODUCTS.NAME_AR') }} <span class="req">*</span></span>
+        <input formControlName="nameAr" [placeholder]="t('PRODUCTS.NAME_AR')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ t('PRODUCTS.BARCODE') }}</span>
+        <input formControlName="barcode" [placeholder]="t('PRODUCTS.BARCODE')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Box price', 'سعر العلبة') }} <span class="req">*</span></span>
         <input formControlName="sellingPrice" type="number" step="0.01" min="0" />
       </label>
       <fieldset class="pack">
         <legend>{{ i18n.pick('Pack size & retail sale', 'العبوة والبيع القطاعي') }}</legend>
         <label class="field">
-          <span>{{ i18n.pick('Strips per box', 'شرائط في العلبة') }}</span>
+          <span class="field-label">{{ i18n.pick('Strips per box', 'شرائط في العلبة') }} <span class="req">*</span></span>
           <input formControlName="stripsPerBox" type="number" min="1" step="1" />
         </label>
         <label class="field">
-          <span>{{ i18n.pick('Pills per strip', 'حبات في الشريط') }}</span>
+          <span class="field-label">{{ i18n.pick('Pills per strip', 'حبات في الشريط') }} <span class="req">*</span></span>
           <input formControlName="unitsPerStrip" type="number" min="1" step="1" />
         </label>
         <label class="active-toggle">
@@ -87,11 +99,11 @@
           {{ i18n.pick('Sell by pill', 'بيع بالحبة') }}
         </label>
         <label class="field">
-          <span>{{ i18n.pick('Strip price (optional)', 'سعر الشريط (اختياري)') }}</span>
+          <span class="field-label">{{ i18n.pick('Strip price (optional)', 'سعر الشريط (اختياري)') }}</span>
           <input formControlName="stripPrice" type="number" step="0.01" min="0" [placeholder]="derivedStripPrice()" />
         </label>
         <label class="field">
-          <span>{{ i18n.pick('Pill price (optional)', 'سعر الحبة (اختياري)') }}</span>
+          <span class="field-label">{{ i18n.pick('Pill price (optional)', 'سعر الحبة (اختياري)') }}</span>
           <input formControlName="unitPrice" type="number" step="0.01" min="0" [placeholder]="derivedUnitPrice()" />
         </label>
       </fieldset>

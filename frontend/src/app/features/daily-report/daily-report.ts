@@ -35,11 +35,17 @@ interface DailyReport {
     <header class="head">
       <h1>{{ pick('Daily invoice', 'اليومية') }}</h1>
       <div class="filters">
-        <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" />
-        <select [value]="locationId()" (change)="locationId.set($any($event.target).value); load()">
-          <option value="">{{ pick('All branches', 'كل الفروع') }}</option>
-          @for (l of sync.locations(); track l.id) { <option [value]="l.id">{{ lang() === 'ar' ? l.nameAr : l.nameEn }}</option> }
-        </select>
+        <label class="field">
+          <span class="field-label">{{ pick('Date', 'التاريخ') }}</span>
+          <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" />
+        </label>
+        <label class="field">
+          <span class="field-label">{{ pick('Branch', 'الفرع') }}</span>
+          <select [value]="locationId()" (change)="locationId.set($any($event.target).value); load()">
+            <option value="">{{ pick('All branches', 'كل الفروع') }}</option>
+            @for (l of sync.locations(); track l.id) { <option [value]="l.id">{{ lang() === 'ar' ? l.nameAr : l.nameEn }}</option> }
+          </select>
+        </label>
         <button type="button" class="btn" (click)="load()">{{ pick('Refresh', 'تحديث') }}</button>
         @if (report()) { <button type="button" class="btn primary" (click)="printReport()">{{ pick('Print', 'طباعة') }}</button> }
       </div>
@@ -80,7 +86,7 @@ interface DailyReport {
             @for (i of r.invoices; track i.id) {
               <tr [class.flag]="i.hasStockWarning">
                 <td>{{ i.soldAt | date: 'HH:mm' }}</td>
-                <td>{{ i.number }} @if (i.source === 'Offline') { <span class="tag">offline</span> }</td>
+                <td>{{ i.number }} @if (i.source === 'Offline') { <span class="tag">{{ pick('offline', 'بدون إنترنت') }}</span> }</td>
                 <td>{{ (lang() === 'ar' ? i.customerNameAr : i.customerNameEn) || pick('Walk-in', 'نقدي') }}</td>
                 <td class="num">{{ i.totalAmount | number: '1.2-2' }}</td>
                 <td class="num">{{ i.paidAmount | number: '1.2-2' }}</td>
@@ -142,7 +148,7 @@ interface DailyReport {
     .page { max-width:72rem; margin:0 auto; display:grid; gap:.8rem; }
     .head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.75rem; }
     h1, h2 { margin:0; } h2 { font-size:1.05rem; margin-top:.5rem; }
-    .filters { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .filters { display:flex; flex-wrap:wrap; gap:.4rem; align-items:flex-end; }
     input, select { padding:.55rem .7rem; border:1px solid var(--border); border-radius:.45rem; background:var(--surface); color:var(--text); font:inherit; }
     .btn { border:1px solid var(--border); background:var(--surface-muted); color:var(--text); border-radius:.45rem; padding:.5rem .8rem; font:inherit; cursor:pointer; }
     .btn.primary { background:var(--accent); color:#fff; border-color:transparent; }

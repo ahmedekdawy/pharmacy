@@ -357,7 +357,7 @@ export class PosPage implements OnInit {
   }
 
   print(r: LocalReceipt): void {
-    const pharmacy = this.auth.user()?.tenantCode ?? 'Pharmacy';
+    const pharmacy = this.auth.user()?.tenantCode ?? this.pick('Pharmacy', 'الصيدلية');
     printHtml(receiptHtml(r, this.lang(), pharmacy), {
       title: r.number,
       dir: this.lang() === 'ar' ? 'rtl' : 'ltr'

@@ -1,105 +1,153 @@
 <section class="page">
-  <h1>Inventory</h1>
+  <h1>{{ i18n.pick('Inventory', 'المخزون') }}</h1>
   @if (error()) { <p class="error">{{ error() }}</p> }
 
   @if (auth.hasPermission('Inventory.Adjust')) {
-    <h2>Opening balance</h2>
+    <h2>{{ i18n.pick('Opening balance', 'رصيد افتتاحي') }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <select formControlName="locationId">
-        <option value="">Location</option>
-        @for (loc of locations(); track loc.id) {
-          <option [value]="loc.id">{{ loc.nameEn }}</option>
-        }
-      </select>
-      <select formControlName="productId">
-        <option value="">Product</option>
-        @for (product of products(); track product.id) {
-          <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
-        }
-      </select>
-      <input formControlName="batchNumber" placeholder="Batch number" />
-      <input formControlName="expiryDate" type="date" />
-      <input formControlName="purchasePrice" type="number" step="0.01" placeholder="Purchase price" />
-      <input formControlName="quantity" type="number" step="0.01" placeholder="Quantity" />
-      <app-icon-button icon="save" type="submit" tone="primary" label="Opening balance"></app-icon-button>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Location', 'الفرع') }} <span class="req">*</span></span>
+        <select formControlName="locationId">
+          <option value="">{{ i18n.pick('Location', 'الفرع') }}</option>
+          @for (loc of locations(); track loc.id) {
+            <option [value]="loc.id">{{ loc.nameEn }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Product', 'الصنف') }} <span class="req">*</span></span>
+        <select formControlName="productId">
+          <option value="">{{ i18n.pick('Product', 'الصنف') }}</option>
+          @for (product of products(); track product.id) {
+            <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Batch number', 'رقم التشغيلة') }} <span class="req">*</span></span>
+        <input formControlName="batchNumber" [placeholder]="i18n.pick('Batch number', 'رقم التشغيلة')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Expiry date', 'تاريخ الصلاحية') }}</span>
+        <input formControlName="expiryDate" type="date" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Purchase price', 'سعر الشراء') }} <span class="req">*</span></span>
+        <input formControlName="purchasePrice" type="number" step="0.01" [placeholder]="i18n.pick('Purchase price', 'سعر الشراء')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Quantity', 'الكمية') }} <span class="req">*</span></span>
+        <input formControlName="quantity" type="number" step="0.01" [placeholder]="i18n.pick('Quantity', 'الكمية')" />
+      </label>
+      <app-icon-button icon="save" type="submit" tone="primary" [label]="i18n.pick('Opening balance', 'رصيد افتتاحي')"></app-icon-button>
     </form>
 
-    <h2>Transfer stock</h2>
+    <h2>{{ i18n.pick('Transfer stock', 'تحويل مخزون') }}</h2>
     <form [formGroup]="transferForm" (ngSubmit)="transfer()">
-      <select formControlName="fromLocationId">
-        <option value="">From</option>
-        @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
-      </select>
-      <select formControlName="toLocationId">
-        <option value="">To</option>
-        @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
-      </select>
-      <select formControlName="productId">
-        <option value="">Product</option>
-        @for (product of products(); track product.id) {
-          <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
-        }
-      </select>
-      <select formControlName="batchId">
-        <option value="">Batch</option>
-        @for (b of batchesFor(transferForm.value.productId, transferForm.value.fromLocationId); track b.batchId) {
-          <option [value]="b.batchId">{{ b.batchNumber }} ({{ b.quantity }})</option>
-        }
-      </select>
-      <input formControlName="quantity" type="number" step="0.01" placeholder="Qty" />
-      <app-icon-button icon="check" type="submit" tone="primary" label="Transfer" />
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('From location', 'من الفرع') }} <span class="req">*</span></span>
+        <select formControlName="fromLocationId">
+          <option value="">{{ i18n.pick('From', 'من') }}</option>
+          @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('To location', 'إلى الفرع') }} <span class="req">*</span></span>
+        <select formControlName="toLocationId">
+          <option value="">{{ i18n.pick('To', 'إلى') }}</option>
+          @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Product', 'الصنف') }} <span class="req">*</span></span>
+        <select formControlName="productId">
+          <option value="">{{ i18n.pick('Product', 'الصنف') }}</option>
+          @for (product of products(); track product.id) {
+            <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Batch', 'التشغيلة') }} <span class="req">*</span></span>
+        <select formControlName="batchId">
+          <option value="">{{ i18n.pick('Batch', 'التشغيلة') }}</option>
+          @for (b of batchesFor(transferForm.value.productId, transferForm.value.fromLocationId); track b.batchId) {
+            <option [value]="b.batchId">{{ b.batchNumber }} ({{ b.quantity }})</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Quantity', 'الكمية') }} <span class="req">*</span></span>
+        <input formControlName="quantity" type="number" step="0.01" [placeholder]="i18n.pick('Qty', 'الكمية')" />
+      </label>
+      <app-icon-button icon="check" type="submit" tone="primary" [label]="i18n.pick('Transfer', 'تحويل')" />
     </form>
 
-    <h2>Adjust stock</h2>
+    <h2>{{ i18n.pick('Adjust stock', 'تسوية المخزون') }}</h2>
     <form [formGroup]="adjustForm" (ngSubmit)="adjust()">
-      <select formControlName="locationId">
-        <option value="">Location</option>
-        @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
-      </select>
-      <select formControlName="productId">
-        <option value="">Product</option>
-        @for (product of products(); track product.id) {
-          <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
-        }
-      </select>
-      <select formControlName="batchId">
-        <option value="">Batch</option>
-        @for (b of batchesFor(adjustForm.value.productId, adjustForm.value.locationId); track b.batchId) {
-          <option [value]="b.batchId">{{ b.batchNumber }} ({{ b.quantity }})</option>
-        }
-      </select>
-      <input formControlName="quantityDelta" type="number" step="0.01" placeholder="Delta (+/-)" />
-      <input formControlName="reason" placeholder="Reason" />
-      <app-icon-button icon="edit" type="submit" tone="primary" label="Adjust" />
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Location', 'الفرع') }} <span class="req">*</span></span>
+        <select formControlName="locationId">
+          <option value="">{{ i18n.pick('Location', 'الفرع') }}</option>
+          @for (loc of locations(); track loc.id) { <option [value]="loc.id">{{ loc.nameEn }}</option> }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Product', 'الصنف') }} <span class="req">*</span></span>
+        <select formControlName="productId">
+          <option value="">{{ i18n.pick('Product', 'الصنف') }}</option>
+          @for (product of products(); track product.id) {
+            <option [value]="product.id">{{ product.code }} — {{ product.nameEn }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Batch', 'التشغيلة') }} <span class="req">*</span></span>
+        <select formControlName="batchId">
+          <option value="">{{ i18n.pick('Batch', 'التشغيلة') }}</option>
+          @for (b of batchesFor(adjustForm.value.productId, adjustForm.value.locationId); track b.batchId) {
+            <option [value]="b.batchId">{{ b.batchNumber }} ({{ b.quantity }})</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Quantity change (+/-)', 'تغيير الكمية (+/-)') }} <span class="req">*</span></span>
+        <input formControlName="quantityDelta" type="number" step="0.01" [placeholder]="i18n.pick('Delta (+/-)', 'الفرق (+/-)')" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ i18n.pick('Reason', 'السبب') }}</span>
+        <input formControlName="reason" [placeholder]="i18n.pick('Reason', 'السبب')" />
+      </label>
+      <app-icon-button icon="edit" type="submit" tone="primary" [label]="i18n.pick('Adjust', 'تسوية')" />
     </form>
   }
 
-  <h2>Stock</h2>
+  <h2>{{ i18n.pick('Stock', 'الرصيد') }}</h2>
   <ul>
     @for (item of stock(); track $index) {
       <li>
         <strong>{{ item.productCode }}</strong> {{ item.productNameEn }}
-        @ {{ item.locationNameEn }}
-        / batch {{ item.batchNumber || '-' }}
-        / exp {{ item.expiryDate || '-' }}
+        &#64; {{ item.locationNameEn }}
+        / {{ i18n.pick('batch', 'التشغيلة') }} {{ item.batchNumber || '-' }}
+        / {{ i18n.pick('exp', 'صلاحية') }} {{ item.expiryDate || '-' }}
         = {{ item.quantity | number: '1.2-2' }}
       </li>
     }
   </ul>
 
-  <h2>Low stock (≤ 10)</h2>
+  <h2>{{ i18n.pick('Low stock (≤ 10)', 'رصيد منخفض (≤ 10)') }}</h2>
   <ul>
     @for (item of lowStock(); track $index) {
       <li>{{ item.productCode }} {{ item.productNameEn }} = {{ item.availableQuantity | number: '1.2-2' }}</li>
     }
   </ul>
 
-  <h2>Near expiry (90 days)</h2>
+  <h2>{{ i18n.pick('Near expiry (90 days)', 'قارب على الانتهاء (90 يومًا)') }}</h2>
   <ul>
     @for (item of nearExpiry(); track $index) {
       <li>
         {{ item.productCode }} {{ item.productNameEn }} — {{ item.batchNumber }}
-        exp {{ item.expiryDate }} ({{ item.availableQuantity | number: '1.2-2' }})
+        {{ i18n.pick('exp', 'صلاحية') }} {{ item.expiryDate }} ({{ item.availableQuantity | number: '1.2-2' }})
       </li>
     }
   </ul>

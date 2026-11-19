@@ -6,12 +6,13 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { tenantInterceptor } from './core/interceptors/tenant.interceptor';
+import { languageInterceptor } from './core/interceptors/language.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, tenantInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, tenantInterceptor, languageInterceptor])),
     // Caches the app shell so the POS opens without internet (production builds only).
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

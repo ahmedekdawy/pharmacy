@@ -16,7 +16,7 @@ input[type='checkbox'] { width: auto; }
   button.on { background: var(--accent); color: #fff; }
 }
 
-.bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; select { flex: 1; min-width: 10rem; width: auto; } }
+.bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; .branch { flex: 1; min-width: 10rem; } }
 .margin { display: flex; align-items: center; gap: .35rem; font-size: .85rem; color: var(--muted); input { width: 5rem; } }
 .net {
   font-size: .8rem; padding: .3rem .6rem; border-radius: 999px;
@@ -24,7 +24,7 @@ input[type='checkbox'] { width: auto; }
   &.off { background: #f6e3c8; color: #8a4b08; }
 }
 
-.scan { display: flex; gap: .5rem; input { font-size: 1.15rem; padding: .85rem 1rem; } }
+.scan { display: flex; gap: .5rem; align-items: flex-end; label.field { flex: 1; } input { font-size: 1.15rem; padding: .85rem 1rem; } }
 .cam { white-space: nowrap; }
 
 .btn {

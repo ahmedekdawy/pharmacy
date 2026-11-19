@@ -77,7 +77,7 @@ export class UsersPage implements OnInit {
       .get<ApiResponse<{ items: UserDto[] }>>(`${environment.apiBaseUrl}/users`)
       .subscribe({
         next: (res) => this.users.set(res.data?.items ?? []),
-        error: () => this.error.set('Unable to load users.')
+        error: () => this.error.set(this.i18n.pick('Unable to load users.', 'تعذر تحميل المستخدمين.'))
       });
   }
 
@@ -132,7 +132,7 @@ export class UsersPage implements OnInit {
             this.startCreate();
             this.reload();
           },
-          error: (err) => this.error.set(apiErrorMessage(err, 'Update failed'))
+          error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Update failed', 'فشل التحديث')))
         });
       return;
     }
@@ -152,7 +152,7 @@ export class UsersPage implements OnInit {
           this.startCreate();
           this.reload();
         },
-        error: (err) => this.error.set(apiErrorMessage(err, 'Create failed'))
+        error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Create failed', 'فشل الإنشاء')))
       });
   }
 
@@ -160,12 +160,12 @@ export class UsersPage implements OnInit {
     const action = isActive ? 'activate' : 'deactivate';
     this.http.post(`${environment.apiBaseUrl}/users/${user.id}/${action}`, {}).subscribe({
       next: () => this.reload(),
-      error: (err) => this.error.set(apiErrorMessage(err, 'Update failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Update failed', 'فشل التحديث')))
     });
   }
 
   remove(user: UserDto): void {
-    if (!confirm(`Delete user ${user.email}?`)) {
+    if (!confirm(this.i18n.pick(`Delete user ${user.email}?`, `حذف المستخدم ${user.email}؟`))) {
       return;
     }
     this.http.delete(`${environment.apiBaseUrl}/users/${user.id}`).subscribe({
@@ -175,7 +175,7 @@ export class UsersPage implements OnInit {
         }
         this.reload();
       },
-      error: (err) => this.error.set(apiErrorMessage(err, 'Delete failed'))
+      error: (err) => this.error.set(apiErrorMessage(err, this.i18n.pick('Delete failed', 'فشل الحذف')))
     });
   }
 }
