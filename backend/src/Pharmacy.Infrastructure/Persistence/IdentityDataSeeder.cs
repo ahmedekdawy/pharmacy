@@ -119,6 +119,9 @@ public static class IdentityDataSeeder
             (PermissionCodes.CashShiftClose, "Cash", "Close cash shift", "إغلاق الوردية"),
             (PermissionCodes.ExpenseView, "Expenses", "View expenses", "عرض المصروفات"),
             (PermissionCodes.ExpenseManage, "Expenses", "Manage expenses", "إدارة المصروفات"),
+            (PermissionCodes.ShortageView, "Shortages", "View shortages & report", "عرض النواقص وتقريرها"),
+            (PermissionCodes.ShortageCreate, "Shortages", "Add shortages (also from POS)", "إضافة نواقص (ومن نقطة البيع)"),
+            (PermissionCodes.ShortageManage, "Shortages", "Manage shortages (status, delete)", "إدارة النواقص (الحالة والحذف)"),
             (PermissionCodes.ReportSales, "Reports", "Sales reports", "تقارير المبيعات"),
             (PermissionCodes.ReportProfit, "Reports", "Profit reports", "تقارير الأرباح"),
             (PermissionCodes.AuditView, "Audit", "View audit logs", "عرض سجل التدقيق"),
@@ -167,7 +170,8 @@ public static class IdentityDataSeeder
             ("pos", "/app/pos", "Point of Sale", "نقطة البيع", 0),
             ("daily-report", "/app/daily-report", "Daily Invoice", "اليومية", 15),
             ("debts", "/app/debts", "Customer Debts", "المديونيات", 10),
-            ("opening-stock", "/app/opening-stock", "Opening Stock Count", "رصيد أول المدة", 6)
+            ("opening-stock", "/app/opening-stock", "Opening Stock Count", "رصيد أول المدة", 6),
+            ("shortages", "/app/shortages", "Shortages", "النواقص", 7)
         };
 
         var existing = await db.Pages.IgnoreQueryFilters().Select(x => x.Code).ToListAsync(cancellationToken);

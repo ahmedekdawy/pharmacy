@@ -89,8 +89,9 @@ export class ReportsPage implements OnInit {
   load(): void {
     const v = this.form.getRawValue();
     const params: Record<string, string> = {};
-    if (v.from) params['from'] = new Date(v.from).toISOString();
-    if (v.to) params['to'] = new Date(`${v.to}T23:59:59Z`).toISOString();
+    // Local (pharmacy) day boundaries converted to UTC — same as the invoices page.
+    if (v.from) params['from'] = new Date(`${v.from}T00:00:00`).toISOString();
+    if (v.to) params['to'] = new Date(`${v.to}T23:59:59.999`).toISOString();
 
     this.http.get<ApiResponse<SalesReport>>(`${environment.apiBaseUrl}/reports/sales`, { params }).subscribe({
       next: (res) => this.sales.set(res.data),
@@ -112,6 +113,7 @@ function daysAgo(n: number): Date {
   return d;
 }
 
+/** yyyy-MM-dd in local time (toISOString would give yesterday's date before 02:00 in Cairo). */
 function toDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

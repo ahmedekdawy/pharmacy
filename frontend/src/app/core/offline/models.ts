@@ -53,7 +53,8 @@ export type OutboxType =
   | 'customer.create'
   | 'customerPayment.create'
   | 'product.create'
-  | 'openingBalance.create';
+  | 'openingBalance.create'
+  | 'shortage.create';
 
 export interface OutboxOp {
   opId: string;

@@ -15,8 +15,8 @@ interface StockItem {
 }
 interface NearExpiry { productCode: string; productNameEn: string; batchNumber: string; expiryDate: string; availableQuantity: number; }
 interface LowStock { productCode: string; productNameEn: string; availableQuantity: number; threshold: number; }
-interface NamedItem { id: string; nameEn: string; }
-interface ProductItem { id: string; code: string; nameEn: string; }
+interface NamedItem { id: string; nameEn: string; nameAr?: string; }
+interface ProductItem { id: string; code: string; nameEn: string; nameAr?: string; }
 
 @Component({
   selector: 'app-inventory',

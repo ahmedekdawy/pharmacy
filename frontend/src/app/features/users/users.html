@@ -11,7 +11,7 @@
     <form class="editor" [formGroup]="form" (ngSubmit)="submit()">
       <label class="field">
         <span class="field-label">{{ i18n.pick('Email', 'البريد الإلكتروني') }} <span class="req">*</span></span>
-        <input formControlName="email" [placeholder]="i18n.pick('Email', 'البريد الإلكتروني')" />
+        <input formControlName="email" dir="ltr" [placeholder]="i18n.pick('Email', 'البريد الإلكتروني')" />
       </label>
       <label class="field">
         <span class="field-label">{{ i18n.pick('Mobile', 'الموبايل') }}</span>
@@ -49,6 +49,7 @@
           icon="save"
           type="submit"
           tone="primary"
+          [showLabel]="true"
           [label]="editingId() ? i18n.pick('Update user', 'تحديث المستخدم') : i18n.pick('Create user', 'إنشاء مستخدم')"
         />
         @if (editingId()) {

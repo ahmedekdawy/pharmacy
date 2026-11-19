@@ -1,0 +1,210 @@
+<section class="page">
+  <header class="head">
+    <div>
+      <h1>{{ pick('Shortages', 'النواقص') }}</h1>
+      <p class="subtitle">
+        {{ pick('Items to reorder and customer requests. Cashiers can also add items from the point of sale.', 'الأصناف المطلوب توفيرها وطلبات العملاء. يمكن للكاشير الإضافة أيضاً من نقطة البيع أثناء البيع.') }}
+      </p>
+    </div>
+  </header>
+
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+
+  <!-- ============ add / edit ============ -->
+  @if (editingId() ? auth.hasPermission('Shortage.Manage') : auth.hasPermission('Shortage.Create')) {
+    <form class="card form" (submit)="$event.preventDefault(); save()">
+      <h2>{{ editingId() ? pick('Edit shortage', 'تعديل صنف ناقص') : pick('Add a shortage', 'إضافة صنف للنواقص') }}</h2>
+
+      <label class="field item-field">
+        <span class="field-label">{{ pick('Item', 'الصنف') }} <span class="req">*</span></span>
+        <input
+          dir="auto"
+          autocomplete="off"
+          [value]="itemQuery()"
+          [readonly]="!!editingId()"
+          (input)="onItemInput($any($event.target).value)"
+          (focus)="suggestOpen.set(true)"
+          (blur)="suggestOpen.set(false)"
+          [placeholder]="pick('Search the catalog or type a new item name', 'ابحث في الأصناف أو اكتب اسم صنف غير موجود')"
+        />
+        @if (suggestOpen() && suggestions().length) {
+          <ul class="suggest" role="listbox">
+            @for (p of suggestions(); track p.id) {
+              <li>
+                <button type="button" (mousedown)="$event.preventDefault(); chooseProduct(p)">
+                  <bdi>{{ productName(p) }}</bdi> <small dir="ltr">{{ p.code }}</small>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        @if (!editingId()) {
+          <small class="hint">
+            @if (selectedProduct(); as p) {
+              ✓ {{ pick('Catalog item', 'صنف من القائمة') }}: <bdi dir="ltr">{{ p.code }}</bdi>
+            } @else if (itemQuery().trim()) {
+              {{ pick('Will be saved as a new (not stocked) item.', 'سيُحفظ كصنف غير موجود بالأصناف.') }}
+            }
+          </small>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field-label">{{ pick('Quantity (boxes)', 'الكمية (علبة)') }} <span class="req">*</span></span>
+        <input type="number" min="1" step="1" inputmode="numeric" [value]="quantity()" (input)="quantity.set(+$any($event.target).value)" />
+      </label>
+
+      @if (editingId()) {
+        <label class="field">
+          <span class="field-label">{{ pick('Status', 'الحالة') }}</span>
+          <select [value]="formStatus()" (change)="formStatus.set($any($event.target).value)">
+            @for (s of statuses; track s) { <option [value]="s" [selected]="s === formStatus()">{{ statusLabel(s) }}</option> }
+          </select>
+        </label>
+      } @else {
+        <label class="field">
+          <span class="field-label">{{ pick('Branch', 'الفرع') }}</span>
+          <select [value]="formLocation()" (change)="formLocation.set($any($event.target).value)">
+            <option value="">{{ pick('All branches', 'كل الفروع') }}</option>
+            @for (l of sync.locations(); track l.id) { <option [value]="l.id">{{ locationName(l) }}</option> }
+          </select>
+        </label>
+      }
+
+      <label class="field">
+        <span class="field-label">{{ pick('Customer name', 'اسم العميل') }}</span>
+        <input [value]="customerName()" (input)="customerName.set($any($event.target).value)" />
+      </label>
+      <label class="field">
+        <span class="field-label">{{ pick('Customer phone', 'هاتف العميل') }}</span>
+        <input dir="ltr" inputmode="tel" [value]="customerPhone()" (input)="customerPhone.set($any($event.target).value)" />
+      </label>
+      <label class="field notes-field">
+        <span class="field-label">{{ pick('Notes', 'ملاحظات') }}</span>
+        <input [value]="notes()" (input)="notes.set($any($event.target).value)" [placeholder]="pick('e.g. preferred supplier, alternative OK', 'مثال: المورد المفضل، يقبل بديل')" />
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary" [disabled]="saving()">
+          {{ saving() ? pick('Saving…', 'جاري الحفظ…') : editingId() ? pick('Update', 'تحديث') : pick('Add to shortages', 'أضف للنواقص') }}
+        </button>
+        @if (editingId() || itemQuery()) {
+          <button type="button" class="btn" (click)="clearForm()">{{ pick('Cancel', 'إلغاء') }}</button>
+        }
+      </div>
+    </form>
+  }
+
+  <!-- ============ filters / report ============ -->
+  <div class="card filters">
+    <label class="field">
+      <span class="field-label">{{ pick('Status', 'الحالة') }}</span>
+      <select [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value); load()">
+        <option value="Active">{{ pick('Open + ordered', 'المطلوب + تم طلبه') }}</option>
+        <option value="">{{ pick('All', 'الكل') }}</option>
+        @for (s of statuses; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }
+      </select>
+    </label>
+    <label class="field">
+      <span class="field-label">{{ pick('From', 'من') }}</span>
+      <input type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value); load()" />
+    </label>
+    <label class="field">
+      <span class="field-label">{{ pick('To', 'إلى') }}</span>
+      <input type="date" [value]="toDate()" (change)="toDate.set($any($event.target).value); load()" />
+    </label>
+    <label class="field">
+      <span class="field-label">{{ pick('Branch', 'الفرع') }}</span>
+      <select [value]="locationFilter()" (change)="locationFilter.set($any($event.target).value); load()">
+        <option value="">{{ pick('All branches', 'كل الفروع') }}</option>
+        @for (l of sync.locations(); track l.id) { <option [value]="l.id">{{ locationName(l) }}</option> }
+      </select>
+    </label>
+    <label class="field grow">
+      <span class="field-label">{{ pick('Search', 'بحث') }}</span>
+      <input type="search" [value]="search()" (input)="search.set($any($event.target).value)" (keydown.enter)="load()"
+             [placeholder]="pick('Item, code, customer…', 'الصنف، الكود، العميل…')" />
+    </label>
+    <div class="filter-actions">
+      <button type="button" class="btn" (click)="load()">{{ pick('Show', 'عرض') }}</button>
+      <button type="button" class="btn" (click)="resetFilters()">{{ pick('Reset', 'إعادة ضبط') }}</button>
+      <button type="button" class="btn primary" (click)="print()" [disabled]="loading()">🖨 {{ pick('Print report', 'طباعة التقرير') }}</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>{{ pick('Items', 'عدد الأصناف') }}</span><b>{{ summary().items }}</b></div>
+    <div class="stat"><span>{{ pick('Total requests', 'إجمالي مرات الطلب') }}</span><b>{{ summary().requests }}</b></div>
+    <div class="stat open"><span>{{ statusLabel('Open') }}</span><b>{{ summary().open }}</b></div>
+    <div class="stat"><span>{{ statusLabel('Ordered') }}</span><b>{{ summary().ordered }}</b></div>
+    <div class="stat"><span>{{ pick('Not stocked', 'غير موجود بالأصناف') }}</span><b>{{ summary().notStocked }}</b></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ pick('Item', 'الصنف') }}</th>
+          <th class="num">{{ pick('Qty (box)', 'الكمية') }}</th>
+          <th class="num">{{ pick('Requests', 'مرات الطلب') }}</th>
+          <th class="num">{{ pick('On hand', 'المتاح') }}</th>
+          <th>{{ pick('Customer', 'العميل') }}</th>
+          <th>{{ pick('Last request', 'آخر طلب') }}</th>
+          <th>{{ pick('Status', 'الحالة') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="8" class="empty-state">{{ pick('Loading…', 'جاري التحميل…') }}</td></tr>
+        } @else {
+          @for (s of items(); track s.id) {
+            <tr [class.done]="s.status === 'Received' || s.status === 'Cancelled'">
+              <td class="item">
+                <b><bdi>{{ itemLabel(s) }}</bdi></b>
+                <small>
+                  @if (s.productCode) { <bdi dir="ltr">{{ s.productCode }}</bdi> } @else { <span class="tag">{{ pick('Not stocked', 'غير موجود') }}</span> }
+                  @if (s.source === 'POS') { <span class="tag pos">{{ pick('POS', 'نقطة البيع') }}</span> }
+                  @if (locationLabel(s)) { · {{ locationLabel(s) }} }
+                </small>
+                @if (s.notes) { <small class="notes">{{ s.notes }}</small> }
+              </td>
+              <td class="num">{{ s.quantity | number: '1.0-2' }}</td>
+              <td class="num"><b>{{ s.requestCount }}</b></td>
+              <td class="num" [class.zero]="s.stockBoxes === 0">{{ s.stockBoxes === null ? '—' : (s.stockBoxes | number: '1.0-2') }}</td>
+              <td>
+                {{ s.customerName }}
+                @if (s.customerPhone) { <a dir="ltr" [href]="'tel:' + s.customerPhone">{{ s.customerPhone }}</a> }
+              </td>
+              <td>
+                {{ s.lastRequestedAt | date: 'short' }}
+                <small class="by">{{ i18n.language() === 'ar' ? s.requestedByAr : s.requestedByEn }}</small>
+              </td>
+              <td>
+                @if (auth.hasPermission('Shortage.Manage')) {
+                  <select class="status" [attr.data-status]="s.status" [attr.aria-label]="pick('Status', 'الحالة')"
+                          (change)="setStatus(s, $any($event.target).value)">
+                    @for (st of statuses; track st) { <option [value]="st" [selected]="st === s.status">{{ statusLabel(st) }}</option> }
+                  </select>
+                } @else {
+                  <span class="badge" [attr.data-status]="s.status">{{ statusLabel(s.status) }}</span>
+                }
+              </td>
+              <td class="actions">
+                @if (auth.hasPermission('Shortage.Manage')) {
+                  <button type="button" class="btn small" (click)="startEdit(s)">{{ pick('Edit', 'تعديل') }}</button>
+                  <button type="button" class="btn small danger" (click)="remove(s)" [attr.aria-label]="pick('Delete', 'حذف')">×</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-state">
+              {{ pick('No shortages match these filters.', 'لا توجد نواقص مطابقة للفلاتر.') }}
+            </td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

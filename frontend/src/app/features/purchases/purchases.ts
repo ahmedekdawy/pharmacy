@@ -8,9 +8,9 @@ import { apiErrorMessage } from '../../core/http-error';
 import { LocalizationService } from '../../core/services/localization.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
-interface Named { id: string; nameEn: string; code?: string; }
+interface Named { id: string; nameEn: string; nameAr?: string; code?: string; }
 interface PurchaseDto { id: string; number: string; supplierNameEn: string; locationNameEn: string; totalAmount: number; status: string; purchasedAt: string; }
-interface ProductItem { id: string; code: string; nameEn: string; }
+interface ProductItem { id: string; code: string; nameEn: string; nameAr?: string; }
 
 @Component({
   selector: 'app-purchases',
@@ -26,26 +26,26 @@ interface ProductItem { id: string; code: string; nameEn: string; }
           <span class="field-label">{{ i18n.pick('Supplier', 'المورد') }} <span class="req">*</span></span>
           <select formControlName="supplierId">
             <option value="">{{ i18n.pick('Supplier', 'المورد') }}</option>
-            @for (s of suppliers(); track s.id) { <option [value]="s.id">{{ s.nameEn }}</option> }
+            @for (s of suppliers(); track s.id) { <option [value]="s.id">{{ i18n.pick(s.nameEn, s.nameAr || s.nameEn) }}</option> }
           </select>
         </label>
         <label class="field">
           <span class="field-label">{{ i18n.pick('Location', 'الفرع') }} <span class="req">*</span></span>
           <select formControlName="locationId">
             <option value="">{{ i18n.pick('Location', 'الفرع') }}</option>
-            @for (l of locations(); track l.id) { <option [value]="l.id">{{ l.nameEn }}</option> }
+            @for (l of locations(); track l.id) { <option [value]="l.id">{{ i18n.pick(l.nameEn, l.nameAr || l.nameEn) }}</option> }
           </select>
         </label>
         <label class="field">
           <span class="field-label">{{ i18n.pick('Product', 'الصنف') }} <span class="req">*</span></span>
           <select formControlName="productId">
             <option value="">{{ i18n.pick('Product', 'الصنف') }}</option>
-            @for (p of products(); track p.id) { <option [value]="p.id">{{ p.code }} — {{ p.nameEn }}</option> }
+            @for (p of products(); track p.id) { <option [value]="p.id">{{ p.code }} — {{ i18n.pick(p.nameEn, p.nameAr || p.nameEn) }}</option> }
           </select>
         </label>
         <label class="field">
           <span class="field-label">{{ i18n.pick('Batch', 'التشغيلة') }} <span class="req">*</span></span>
-          <input formControlName="batchNumber" [placeholder]="i18n.pick('Batch', 'التشغيلة')" />
+          <input formControlName="batchNumber" dir="ltr" [placeholder]="i18n.pick('Batch', 'التشغيلة')" />
         </label>
         <label class="field">
           <span class="field-label">{{ i18n.pick('Expiry date', 'تاريخ الصلاحية') }}</span>
@@ -59,7 +59,9 @@ interface ProductItem { id: string; code: string; nameEn: string; }
           <span class="field-label">{{ i18n.pick('Unit cost', 'تكلفة الوحدة') }} <span class="req">*</span></span>
           <input formControlName="unitCost" type="number" step="0.01" [placeholder]="i18n.pick('Unit cost', 'تكلفة الوحدة')" />
         </label>
-        <app-icon-button icon="save" type="submit" tone="primary" [label]="i18n.pick('Receive purchase', 'استلام المشتريات')" />
+        <div class="form-actions">
+          <app-icon-button icon="save" [showLabel]="true" type="submit" tone="primary" [label]="i18n.pick('Receive purchase', 'استلام المشتريات')" />
+        </div>
       </form>
     }
     <ul>
@@ -75,6 +77,7 @@ interface ProductItem { id: string; code: string; nameEn: string; }
     input,select { padding:.7rem .8rem; border-radius:.35rem; border:1px solid var(--border); font:inherit; background:var(--surface); color:var(--text); }
     ul { list-style:none; padding:0; } li { padding:.75rem 0; border-bottom:1px solid var(--border); }
     .error { color:#c45c4a; }
+    .form-actions { grid-column:1 / -1; display:flex; gap:.45rem; }
   `]
 })
 export class PurchasesPage implements OnInit {

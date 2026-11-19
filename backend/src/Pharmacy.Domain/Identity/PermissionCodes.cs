@@ -52,6 +52,10 @@ public static class PermissionCodes
     public const string ExpenseView = "Expense.View";
     public const string ExpenseManage = "Expense.Manage";
 
+    public const string ShortageView = "Shortage.View";
+    public const string ShortageCreate = "Shortage.Create";
+    public const string ShortageManage = "Shortage.Manage";
+
     public const string ReportSales = "Report.Sales";
     public const string ReportProfit = "Report.Profit";
 

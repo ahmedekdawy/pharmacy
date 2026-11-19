@@ -24,12 +24,19 @@ public sealed class SearchProductsQueryHandler(
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = request.Search.Trim().ToLowerInvariant();
-            query = query.Where(x =>
-                x.Code.ToLower().Contains(term) ||
-                x.NameAr.ToLower().Contains(term) ||
-                x.NameEn.ToLower().Contains(term) ||
-                (x.Barcode != null && x.Barcode.ToLower().Contains(term)));
+            // Each word must match some field, in any order.
+            var words = request.Search.Trim().ToLowerInvariant()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Take(8);
+            foreach (var word in words)
+            {
+                var term = word;
+                query = query.Where(x =>
+                    x.Code.ToLower().Contains(term) ||
+                    x.NameAr.ToLower().Contains(term) ||
+                    x.NameEn.ToLower().Contains(term) ||
+                    (x.Barcode != null && x.Barcode.ToLower().Contains(term)));
+            }
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

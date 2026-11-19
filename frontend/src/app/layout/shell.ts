@@ -118,6 +118,7 @@ function iconFor(code: string): string {
     case 'locations':
       return 'locations';
     case 'inventory':
+    case 'shortages':
       return 'inventory';
     case 'suppliers':
     case 'purchases':

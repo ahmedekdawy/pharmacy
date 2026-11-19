@@ -31,15 +31,14 @@
           @for (drug of catalogResults(); track $index) {
             <li>
               <button type="button" (click)="selectDrug(drug)">
-                <strong>{{ drug.commercialNameEn }}</strong>
+                <strong><bdi dir="ltr">{{ drug.commercialNameEn }}</bdi></strong>
                 <span>{{ drug.commercialNameAr }}</span>
                 <small>{{ drug.scientificName }} · {{ drug.manufacturer }} · {{ drug.priceEgp | number: '1.2-2' }} {{ i18n.pick('EGP', 'ج.م') }}</small>
               </button>
             </li>
           }
         </ul>
-      } @else if (catalogOpen() && !catalogLoading() && catalogSearch.value.trim()) {
-        <p class="catalog-empty">{{ t('PRODUCTS.NO_MATCHES') }}</p>
+      } @else if (catalogOpen() && !catalogLoading() && catalogSearch.value.trim()) {        <p class="catalog-empty">{{ t('PRODUCTS.NO_MATCHES') }}</p>
       }
     </div>
   }
@@ -62,11 +61,12 @@
       </p>
       <label class="field">
         <span class="field-label">{{ t('PRODUCTS.CODE') }} <span class="req">*</span></span>
-        <input formControlName="code" [placeholder]="t('PRODUCTS.CODE')" />
+        <input formControlName="code" dir="ltr" [class.invalid]="!!codeError()" [attr.aria-invalid]="!!codeError()" (input)="codeError.set(null)" [placeholder]="t('PRODUCTS.CODE')" />
+        @if (codeError()) { <span class="field-error">{{ codeError() }}</span> }
       </label>
       <label class="field">
         <span class="field-label">{{ t('PRODUCTS.NAME_EN') }} <span class="req">*</span></span>
-        <input formControlName="nameEn" [placeholder]="t('PRODUCTS.NAME_EN')" />
+        <input formControlName="nameEn" dir="ltr" [placeholder]="t('PRODUCTS.NAME_EN')" />
       </label>
       <label class="field">
         <span class="field-label">{{ t('PRODUCTS.NAME_AR') }} <span class="req">*</span></span>
@@ -74,7 +74,7 @@
       </label>
       <label class="field">
         <span class="field-label">{{ t('PRODUCTS.BARCODE') }}</span>
-        <input formControlName="barcode" [placeholder]="t('PRODUCTS.BARCODE')" />
+        <input formControlName="barcode" dir="ltr" inputmode="numeric" [placeholder]="t('PRODUCTS.BARCODE')" />
       </label>
       <label class="field">
         <span class="field-label">{{ i18n.pick('Box price', 'سعر العلبة') }} <span class="req">*</span></span>
@@ -82,6 +82,9 @@
       </label>
       <fieldset class="pack">
         <legend>{{ i18n.pick('Pack size & retail sale', 'العبوة والبيع القطاعي') }}</legend>
+        @if (packGuess()) {
+          <p class="edit-hint">{{ packGuess() }}</p>
+        }
         <label class="field">
           <span class="field-label">{{ i18n.pick('Strips per box', 'شرائط في العلبة') }} <span class="req">*</span></span>
           <input formControlName="stripsPerBox" type="number" min="1" step="1" />
@@ -118,6 +121,7 @@
           icon="save"
           type="submit"
           tone="primary"
+          [showLabel]="true"
           [label]="editingId() ? t('PRODUCTS.UPDATE') : t('COMMON.SAVE')"
         />
         @if (editingId()) {
@@ -134,8 +138,8 @@
       @for (product of products(); track product.id) {
         <li>
           <div class="product-meta">
-            <strong>{{ product.code }}</strong>
-            <span>— {{ product.nameEn }} / {{ product.nameAr }}</span>
+            <strong><bdi dir="ltr">{{ product.code }}</bdi></strong>
+            <span>— <bdi dir="ltr">{{ product.nameEn }}</bdi> / <bdi>{{ product.nameAr }}</bdi></span>
             <em>{{ product.isActive ? t('PRODUCTS.ACTIVE') : t('PRODUCTS.INACTIVE') }}</em>
           </div>
           <div class="actions">
@@ -151,6 +155,8 @@
             }
           </div>
         </li>
+      } @empty {
+        <li class="empty-state">{{ i18n.pick('No products yet. Search the drug catalog above to add one.', 'لا توجد أصناف بعد. ابحث في دليل الأدوية بالأعلى لإضافة صنف.') }}</li>
       }
     </ul>
   }

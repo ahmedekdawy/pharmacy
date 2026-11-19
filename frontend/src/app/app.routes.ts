@@ -109,6 +109,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/cash-shifts/cash-shifts').then((m) => m.CashShiftsPage)
       },
       {
+        path: 'shortages',
+        canActivate: [permissionGuard('Shortage.View')],
+        loadComponent: () => import('./features/shortages/shortages').then((m) => m.ShortagesPage)
+      },
+      {
         path: 'expenses',
         canActivate: [permissionGuard('Expense.View')],
         loadComponent: () => import('./features/expenses/expenses').then((m) => m.ExpensesPage)

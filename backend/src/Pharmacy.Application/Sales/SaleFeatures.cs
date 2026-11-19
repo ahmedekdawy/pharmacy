@@ -2,6 +2,7 @@ using Pharmacy.Shared.Localization;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pharmacy.Application.Common;
 using Pharmacy.Application.Common.Interfaces;
 using Pharmacy.Application.Customers;
 using Pharmacy.Domain.Catalog;
@@ -87,7 +88,8 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
             item.RuleFor(i => i.ProductId).NotEmpty();
             item.RuleFor(i => i.Quantity).GreaterThan(0);
             item.RuleFor(i => i.Unit).IsInEnum();
-            item.RuleFor(i => i.UnitPrice).GreaterThanOrEqualTo(0).When(i => i.UnitPrice.HasValue);
+            item.RuleFor(i => i.UnitPrice).GreaterThan(0).When(i => i.UnitPrice.HasValue)
+                .WithMessage("Unit price must be greater than zero.");
         });
     }
 }
@@ -191,6 +193,7 @@ public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTena
             .ToListAsync(cancellationToken);
 
         decimal subTotal = 0;
+        var today = PharmacyClock.Today();
 
         foreach (var line in request.Items)
         {
@@ -211,7 +214,7 @@ public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTena
             var baseRequired = line.Quantity * factor;
             subTotal += lineTotal;
 
-            var allocations = Allocate(product, line, baseRequired, batches, request.IsOffline, warnings);
+            var allocations = Allocate(product, line, baseRequired, batches, request.IsOffline, warnings, today);
             if (warnings.Count > 0 && request.IsOffline) sale.HasStockWarning = true;
 
             // Split the line across batches proportionally, keeping the line total exact.
@@ -255,8 +258,19 @@ public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTena
             }
         }
 
-        var discount = Math.Min(Math.Round(request.DiscountAmount, 2), subTotal);
+        // A sale must bring in money. Offline sales already happened on the device, so they are
+        // recorded (clamped) with a warning instead of being lost.
+        var requestedDiscount = Math.Round(request.DiscountAmount, 2);
+        if (requestedDiscount > subTotal)
+        {
+            if (!request.IsOffline) throw new InvalidOperationException("Discount cannot exceed the invoice subtotal.");
+            warnings.Add("Discount cannot exceed the invoice subtotal.");
+        }
+
+        var discount = Math.Min(requestedDiscount, subTotal);
         var total = subTotal - discount;
+        if (total <= 0 && !request.IsOffline)
+            throw new InvalidOperationException("Invoice net total must be greater than zero.");
         var paid = Math.Min(Math.Round(request.PaidAmount ?? total, 2), total);
         var due = total - paid;
 
@@ -307,10 +321,14 @@ public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTena
         decimal baseRequired,
         List<ProductBatch> batches,
         bool lenient,
-        List<string> warnings)
+        List<string> warnings,
+        DateOnly today)
     {
         var result = new List<(ProductBatch?, decimal)>();
-        var candidates = batches.Where(x => x.ProductId == product.Id).ToList();
+        var all = batches.Where(x => x.ProductId == product.Id).ToList();
+        // Expired batches (expiry date today or earlier) are never picked for online sales.
+        var candidates = all.Where(x => !PharmacyClock.IsExpired(x.ExpiryDate, today)).ToList();
+        var expired = all.Where(x => PharmacyClock.IsExpired(x.ExpiryDate, today)).ToList();
 
         if (line.BatchId.HasValue)
         {
@@ -343,11 +361,27 @@ public sealed class CreateSaleCommandHandler(IPharmacyDbContext db, ICurrentTena
             remaining -= take;
         }
 
+        if (remaining > 0 && !lenient)
+        {
+            throw new InvalidOperationException(expired.Any(x => x.AvailableQuantity > 0)
+                ? $"Only expired stock is left for product {product.Code}."
+                : $"Insufficient stock for product {product.Code}.");
+        }
+
+        // Offline: the goods physically left the shelf, so record them against expired stock if that is all there is.
+        foreach (var batch in expired)
+        {
+            if (remaining <= 0) break;
+            if (batch.AvailableQuantity <= 0) continue;
+            var take = Math.Min(batch.AvailableQuantity, remaining);
+            result.Add((batch, take));
+            remaining -= take;
+            warnings.Add($"{product.Code}: sold from an expired batch.");
+        }
+        candidates = [.. candidates, .. expired];
+
         if (remaining > 0)
         {
-            if (!lenient)
-                throw new InvalidOperationException($"Insufficient stock for product {product.Code}.");
-
             warnings.Add($"{product.Code}: stock short by {remaining:0.##} unit(s).");
             var fallback = candidates.LastOrDefault();
             var existingIndex = result.FindIndex(x => x.Item1 == fallback);

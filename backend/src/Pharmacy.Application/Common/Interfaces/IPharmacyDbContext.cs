@@ -25,6 +25,7 @@ public interface IPharmacyDbContext
     DbSet<DrugBarcode> DrugBarcodes { get; }
     DbSet<ProductBatch> ProductBatches { get; }
     DbSet<InventoryTransaction> InventoryTransactions { get; }
+    DbSet<Shortage> Shortages { get; }
     DbSet<Supplier> Suppliers { get; }
     DbSet<Customer> Customers { get; }
     DbSet<CustomerPayment> CustomerPayments { get; }

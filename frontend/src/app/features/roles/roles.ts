@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -12,8 +12,15 @@ interface RoleDto {
   id: string; code: string; nameEn: string; nameAr: string; isActive: boolean;
   permissions: string[]; pages: string[]; permissionIds: string[]; pageIds: string[];
 }
-interface PermissionDto { id: string; code: string; module: string; nameEn: string; }
-interface PageDto { id: string; code: string; route: string; nameEn: string; }
+interface PermissionDto { id: string; code: string; module: string; nameEn: string; nameAr: string; }
+interface PageDto { id: string; code: string; route: string; nameEn: string; nameAr: string; }
+
+const MODULES_AR: Record<string, string> = {
+  Users: 'المستخدمون', Roles: 'الأدوار', Pages: 'الصفحات', Permissions: 'الصلاحيات', Products: 'المنتجات',
+  Locations: 'الفروع', Categories: 'التصنيفات', Brands: 'العلامات', Inventory: 'المخزون', Suppliers: 'الموردون',
+  Purchasing: 'المشتريات', Customers: 'العملاء', Sales: 'المبيعات', Cash: 'الورديات', Expenses: 'المصروفات',
+  Shortages: 'النواقص', Reports: 'التقارير', Audit: 'سجل التدقيق', Settings: 'الإعدادات'
+};
 
 @Component({
   selector: 'app-roles',
@@ -54,6 +61,40 @@ export class RolesPage implements OnInit {
   }
 
   t(key: string): string { return this.i18n.translate(key); }
+
+  /** Permissions grouped by module, in the order the API returns them. */
+  readonly permissionGroups = computed(() => {
+    const groups = new Map<string, PermissionDto[]>();
+    for (const p of this.permissions()) {
+      groups.set(p.module, [...(groups.get(p.module) ?? []), p]);
+    }
+    return [...groups.entries()].map(([module, items]) => ({ module, items }));
+  });
+
+  permissionName(p: PermissionDto): string {
+    return this.i18n.pick(p.nameEn || p.code, p.nameAr || p.nameEn || p.code);
+  }
+
+  pageName(p: PageDto): string {
+    return this.i18n.pick(p.nameEn || p.code, p.nameAr || p.nameEn || p.code);
+  }
+
+  moduleName(module: string): string {
+    return this.i18n.language() === 'ar' ? MODULES_AR[module] ?? module : module;
+  }
+
+  /** Localized names for a role's permissions / pages (falls back to the raw code if unknown). */
+  rolePermissionNames(role: RoleDto): string {
+    const byId = new Map(this.permissions().map((p) => [p.id, p]));
+    return (role.permissionIds ?? []).map((id) => { const p = byId.get(id); return p ? this.permissionName(p) : id; }).join('، ')
+      || role.permissions.join(', ');
+  }
+
+  rolePageNames(role: RoleDto): string {
+    const byId = new Map(this.pages().map((p) => [p.id, p]));
+    return (role.pageIds ?? []).map((id) => { const p = byId.get(id); return p ? this.pageName(p) : id; }).join('، ')
+      || role.pages.join(', ');
+  }
 
   reload(): void {
     this.http.get<ApiResponse<RoleDto[]>>(`${environment.apiBaseUrl}/roles`).subscribe({
