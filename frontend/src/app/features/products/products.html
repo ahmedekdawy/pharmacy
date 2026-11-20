@@ -74,8 +74,16 @@
       </label>
       <label class="field">
         <span class="field-label">{{ t('PRODUCTS.BARCODE') }}</span>
-        <input formControlName="barcode" dir="ltr" inputmode="numeric" [placeholder]="t('PRODUCTS.BARCODE')" />
+        <div class="barcode-row">
+          <input formControlName="barcode" dir="ltr" inputmode="numeric" [placeholder]="t('PRODUCTS.BARCODE')" />
+          @if (cameraSupported()) {
+            <button type="button" class="cam" (click)="cameraOpen.set(true)" [attr.aria-label]="i18n.pick('Scan with camera', 'مسح بالكاميرا')">📷</button>
+          }
+        </div>
       </label>
+      @if (cameraOpen()) {
+        <app-barcode-scanner (scanned)="onCameraScan($event)" (closed)="cameraOpen.set(false)" />
+      }
       <label class="field">
         <span class="field-label">{{ i18n.pick('Box price', 'سعر العلبة') }} <span class="req">*</span></span>
         <input formControlName="sellingPrice" type="number" step="0.01" min="0" />

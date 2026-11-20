@@ -8,6 +8,7 @@ import { ApiResponse, ApiService, ProductDto } from '../../core/services/api.ser
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { IconButton } from '../../shared/ui/icon-button';
+import { BarcodeScanner } from '../../shared/ui/barcode-scanner';
 import { apiErrorMessage } from '../../core/http-error';
 
 export interface EgyptianDrug {
@@ -23,7 +24,7 @@ export interface EgyptianDrug {
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [ReactiveFormsModule, DecimalPipe, IconButton],
+  imports: [ReactiveFormsModule, DecimalPipe, IconButton, BarcodeScanner],
   templateUrl: './products.html',
   styleUrl: './products.scss'
 })
@@ -46,6 +47,7 @@ export class Products implements OnInit, OnDestroy {
   readonly catalogOpen = signal(false);
   readonly codeError = signal<string | null>(null);
   readonly packGuess = signal<string | null>(null);
+  readonly cameraOpen = signal(false);
 
   readonly catalogSearch = this.fb.nonNullable.control('');
   readonly form = this.fb.group({
@@ -107,6 +109,15 @@ export class Products implements OnInit, OnDestroy {
 
   t(key: string): string {
     return this.i18n.translate(key);
+  }
+
+  cameraSupported(): boolean {
+    return BarcodeScanner.isSupported();
+  }
+
+  onCameraScan(raw: string): void {
+    this.cameraOpen.set(false);
+    this.form.patchValue({ barcode: raw });
   }
 
   onCatalogInput(value: string): void {

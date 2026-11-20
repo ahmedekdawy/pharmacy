@@ -197,6 +197,19 @@ form {
   color: var(--muted);
 }
 
+.barcode-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cam {
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  border-radius: 0.45rem;
+  padding: 0 0.9rem;
+  font-size: 1.2rem;
+}
+
 .pack {
   grid-column: 1 / -1;
   display: grid;

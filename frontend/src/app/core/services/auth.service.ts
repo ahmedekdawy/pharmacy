@@ -60,7 +60,12 @@ export class AuthService {
   readonly pages = computed(() => this.session()?.pages ?? []);
   readonly permissions = computed(() => this.session()?.permissions ?? []);
 
-  login(tenantCode: string, emailOrMobile: string, password: string): Observable<ApiResponse<LoginResult>> {
+  login(
+    tenantCode: string,
+    emailOrMobile: string,
+    password: string,
+    rememberMe = true
+  ): Observable<ApiResponse<LoginResult>> {
     return this.http
       .post<ApiResponse<LoginResult>>(`${environment.apiBaseUrl}/auth/login`, {
         tenantCode,
@@ -72,7 +77,7 @@ export class AuthService {
           if (!res.success || !res.data) {
             throw new Error(res.errors?.[0] ?? 'Login failed');
           }
-          this.persist(res.data);
+          this.persist(res.data, rememberMe);
           this.tenantService.setLastTenantCode(res.data.tenantCode ?? tenantCode);
         })
       );
@@ -86,7 +91,7 @@ export class AuthService {
           if (!res.success || !res.data) {
             throw new Error(res.errors?.[0] ?? 'Registration failed');
           }
-          this.persist(res.data);
+          this.persist(res.data, true);
         })
       );
   }
@@ -94,28 +99,35 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
     this.tenantService.clear();
     this.session.set(null);
     void this.router.navigateByUrl('/login');
   }
 
   token(): string | null {
-    return this.session()?.accessToken ?? localStorage.getItem(TOKEN_KEY);
+    return this.session()?.accessToken ?? localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
   }
 
   hasPermission(code: string): boolean {
     return this.permissions().some((p) => p.toLowerCase() === code.toLowerCase());
   }
 
-  private persist(data: LoginResult): void {
-    localStorage.setItem(TOKEN_KEY, data.accessToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(data));
+  /** Remembered sessions survive browser restarts (localStorage); others end when the tab/browser closes (sessionStorage). */
+  private persist(data: LoginResult, rememberMe: boolean): void {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    const other = rememberMe ? sessionStorage : localStorage;
+    other.removeItem(TOKEN_KEY);
+    other.removeItem(USER_KEY);
+    storage.setItem(TOKEN_KEY, data.accessToken);
+    storage.setItem(USER_KEY, JSON.stringify(data));
     this.tenantService.setTenantId(data.tenantId);
     this.session.set(data);
   }
 
   private readSession(): LoginResult | null {
-    const raw = localStorage.getItem(USER_KEY);
+    const raw = localStorage.getItem(USER_KEY) ?? sessionStorage.getItem(USER_KEY);
     if (!raw) {
       return null;
     }

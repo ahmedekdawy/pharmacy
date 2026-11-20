@@ -28,7 +28,6 @@
       type="search"
       inputmode="search"
       autocomplete="off"
-      autofocus
       [value]="query()"
       (input)="query.set($any($event.target).value)"
       (keydown.enter)="onSearchEnter()"
@@ -82,10 +81,9 @@
   </div>
 
   <!-- ============ cart / checkout ============ -->
-  <aside class="cart" [class.open]="cartOpen()">
+  <aside class="cart">
     <header class="cart-head">
       <h2>{{ pick('Invoice', 'الفاتورة') }} <span class="badge">{{ itemCount() }}</span></h2>
-      <button type="button" class="link mobile-only" (click)="cartOpen.set(false)">{{ pick('Back', 'رجوع') }}</button>
       @if (itemCount()) {
         <button type="button" class="link danger" (click)="resetSale()">{{ pick('Clear', 'مسح') }}</button>
       }
@@ -225,14 +223,6 @@
       </button>
     }
   </aside>
-
-  <!-- mobile sticky summary -->
-  @if (!cartOpen()) {
-    <button type="button" class="mobile-summary" (click)="cartOpen.set(true)">
-      <span>{{ pick('Invoice', 'الفاتورة') }} ({{ itemCount() }})</span>
-      <b>{{ total() | number: '1.2-2' }}</b>
-    </button>
-  }
 
   @if (shortageDialog(); as d) {
     <app-shortage-quick-add [product]="d.product" [initialName]="d.name" [locationId]="locationId()"

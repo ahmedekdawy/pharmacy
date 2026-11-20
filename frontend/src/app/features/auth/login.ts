@@ -26,10 +26,13 @@ export class Login {
   private readonly route = inject(ActivatedRoute);
   private readonly tenantService = inject(TenantService);
 
+  readonly showPassword = signal(false);
+
   readonly form = this.fb.group({
     tenantCode: [this.initialTenantCode(), [Validators.required, Validators.maxLength(64)]],
     identifier: ['admin@demo.pharmacy', [Validators.required, Validators.maxLength(256)]],
-    password: ['Admin@123', [Validators.required, Validators.maxLength(256)]]
+    password: ['Admin@123', [Validators.required, Validators.maxLength(256)]],
+    rememberMe: [true]
   });
 
   /** Query string `?tenant=` wins, then the last tenant code stored locally, then the demo default. */
@@ -53,9 +56,9 @@ export class Login {
 
     this.loading.set(true);
     this.error.set(null);
-    const { tenantCode, identifier, password } = this.form.getRawValue();
+    const { tenantCode, identifier, password, rememberMe } = this.form.getRawValue();
 
-    this.auth.login(tenantCode!, identifier!, password!).subscribe({
+    this.auth.login(tenantCode!, identifier!, password!, !!rememberMe).subscribe({
       next: () => {
         this.loading.set(false);
         void this.router.navigateByUrl('/app/products');

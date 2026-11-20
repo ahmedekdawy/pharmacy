@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import { IconButton } from '../../shared/ui/icon-button';
 import { apiErrorMessage } from '../../core/http-error';
 import { LocalizationService } from '../../core/services/localization.service';
+import { AuthService } from '../../core/services/auth.service';
+import { BrandingKind, BrandingService } from '../../core/services/branding.service';
 
 interface ApiResponse<T> { data: T; success: boolean; errors: string[]; }
 interface SettingDto { key: string; value: string; }
@@ -17,6 +19,26 @@ interface SettingDto { key: string; value: string; }
   <section class="page">
     <h1>{{ i18n.pick('Settings', 'الإعدادات') }}</h1>
     @if (error()) { <p class="error">{{ error() }}</p> }
+
+    <section class="branding">
+      <h2>{{ i18n.pick('Branding', 'الهوية البصرية') }}</h2>
+      <div class="branding-row">
+        @for (kind of brandingKinds; track kind.key) {
+          <div class="branding-item">
+            <span class="field-label">{{ i18n.pick(kind.en, kind.ar) }}</span>
+            @if (brandingUrl()[kind.key] && !brandingMissing().has(kind.key)) {
+              <img [src]="brandingUrl()[kind.key]" [alt]="kind.en" (error)="onImageMissing(kind.key)" />
+            } @else {
+              <div class="branding-placeholder">{{ i18n.pick('Not uploaded yet', 'لم يتم الرفع بعد') }}</div>
+            }
+            <input type="file" accept="image/*" [disabled]="brandingUploading().has(kind.key)" (change)="onFileSelected($event, kind.key)" />
+            @if (brandingErrors()[kind.key]; as msg) { <small class="error">{{ msg }}</small> }
+            @if (brandingUploading().has(kind.key)) { <small class="hint">{{ i18n.pick('Uploading…', 'جارٍ الرفع…') }}</small> }
+          </div>
+        }
+      </div>
+    </section>
+
     <form [formGroup]="form" (ngSubmit)="save()">
       <label class="field">
         <span class="field-label">{{ i18n.pick('Key', 'المفتاح') }} <span class="req">*</span></span>
@@ -65,11 +87,21 @@ interface SettingDto { key: string; value: string; }
     li > div:first-child { display:grid; gap:.15rem; }
     .value { word-break:break-word; }
     .hint { color:var(--muted); font-size:.78rem; }
+    .branding { margin-bottom:1.75rem; }
+    .branding h2 { font-size:1rem; margin:0 0 .75rem; }
+    .branding-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(14rem,1fr)); gap:1rem; }
+    .branding-item { display:grid; gap:.4rem; }
+    .branding-item img, .branding-placeholder {
+      width:100%; height:7rem; object-fit:contain; border:1px solid var(--border); border-radius:.35rem; background:var(--surface);
+    }
+    .branding-placeholder { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:.8rem; }
   `]
 })
 export class SettingsPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
+  private readonly auth = inject(AuthService);
+  private readonly branding = inject(BrandingService);
   readonly i18n = inject(LocalizationService);
   readonly items = signal<SettingDto[]>([]);
   readonly editingKey = signal<string | null>(null);
@@ -79,6 +111,15 @@ export class SettingsPage implements OnInit {
   readonly knownKeys = [
     { key: 'Contact.WhatsApp', en: 'WhatsApp number (shown on the public page)', ar: 'رقم واتساب (يظهر في صفحة الصيدلية)' }
   ];
+
+  readonly brandingKinds: { key: BrandingKind; en: string; ar: string }[] = [
+    { key: 'logo', en: 'Logo', ar: 'الشعار' },
+    { key: 'banner', en: 'Banner', ar: 'البانر' }
+  ];
+  readonly brandingUrl = signal<Record<BrandingKind, string>>({ logo: '', banner: '' });
+  readonly brandingMissing = signal<Set<BrandingKind>>(new Set());
+  readonly brandingUploading = signal<Set<BrandingKind>>(new Set());
+  readonly brandingErrors = signal<Record<string, string>>({});
 
   labelOf(key: string | null | undefined): string | null {
     const known = this.knownKeys.find((k) => k.key.toLowerCase() === (key ?? '').trim().toLowerCase());
@@ -90,7 +131,47 @@ export class SettingsPage implements OnInit {
     value: ['', Validators.required]
   });
 
-  ngOnInit(): void { this.reload(); }
+  ngOnInit(): void {
+    this.reload();
+    this.refreshBrandingUrls();
+  }
+
+  private refreshBrandingUrls(): void {
+    const tenantCode = this.auth.user()?.tenantCode;
+    if (!tenantCode) return;
+    this.brandingUrl.set({
+      logo: this.branding.imageUrl(tenantCode, 'logo'),
+      banner: this.branding.imageUrl(tenantCode, 'banner')
+    });
+    this.brandingMissing.set(new Set());
+  }
+
+  onImageMissing(kind: BrandingKind): void {
+    this.brandingMissing.update((set) => new Set(set).add(kind));
+  }
+
+  onFileSelected(event: Event, kind: BrandingKind): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    this.brandingErrors.update((errs) => ({ ...errs, [kind]: '' }));
+    this.brandingUploading.update((set) => new Set(set).add(kind));
+    this.branding.upload(kind, file).subscribe({
+      next: () => {
+        this.brandingUploading.update((set) => { const next = new Set(set); next.delete(kind); return next; });
+        this.refreshBrandingUrls();
+      },
+      error: (err) => {
+        this.brandingUploading.update((set) => { const next = new Set(set); next.delete(kind); return next; });
+        this.brandingErrors.update((errs) => ({
+          ...errs,
+          [kind]: apiErrorMessage(err, this.i18n.pick('Upload failed', 'فشل الرفع'))
+        }));
+      }
+    });
+  }
 
   reload(): void {
     this.http.get<ApiResponse<SettingDto[]>>(`${environment.apiBaseUrl}/settings`).subscribe({

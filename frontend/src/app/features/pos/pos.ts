@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { SyncService } from '../../core/offline/sync.service';
@@ -39,7 +39,7 @@ const LOCATION_KEY = 'pharmacy.pos_location';
   templateUrl: './pos.html',
   styleUrl: './pos.scss'
 })
-export class PosPage implements OnInit {
+export class PosPage implements OnInit, AfterViewInit {
   readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
   readonly sync = inject(SyncService);
@@ -61,8 +61,6 @@ export class PosPage implements OnInit {
   readonly showNewCustomer = signal(false);
   readonly newCustomerName = signal('');
   readonly newCustomerPhone = signal('');
-  readonly cartOpen = signal(false); // mobile bottom sheet
-
   /** Shortage dialog: open with a catalog product, or with free text (item not in the catalog). */
   readonly shortageDialog = signal<{ product: PosProduct | null; name: string } | null>(null);
   readonly toast = signal<string | null>(null);
@@ -161,6 +159,21 @@ export class PosPage implements OnInit {
     if (!this.sync.products().length) void this.sync.sync();
   }
 
+  ngAfterViewInit(): void {
+    this.focusSearch();
+  }
+
+  /**
+   * Re-focusing the search box after every add keeps a barcode-scanner/physical-keyboard
+   * workflow fast, but on a touch device it pops the on-screen keyboard open over the
+   * product list after every single tap. Only do it when there's a fine pointer (mouse),
+   * i.e. not a touch-only phone/tablet.
+   */
+  private focusSearch(): void {
+    if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) return;
+    this.searchBox()?.nativeElement.focus();
+  }
+
   // ---------------------------------------------------------------- helpers for the template
 
   pick(en: string, ar: string): string {
@@ -236,7 +249,7 @@ export class PosPage implements OnInit {
       return [...lines, { key: newId(), product: p, unit, qty: 1, price: unitPrice(p, unit) }];
     });
     this.query.set('');
-    this.searchBox()?.nativeElement.focus();
+    this.focusSearch();
   }
 
   setUnit(line: CartLine, unit: SaleUnit): void {
@@ -271,12 +284,12 @@ export class PosPage implements OnInit {
   onShortageSaved(message: string): void {
     this.shortageDialog.set(null);
     this.showToast(message);
-    this.searchBox()?.nativeElement.focus();
+    this.focusSearch();
   }
 
   closeShortage(): void {
     this.shortageDialog.set(null);
-    this.searchBox()?.nativeElement.focus();
+    this.focusSearch();
   }
 
   private showToast(message: string): void {
@@ -419,7 +432,7 @@ export class PosPage implements OnInit {
 
   closeReceipt(): void {
     this.receipt.set(null);
-    this.searchBox()?.nativeElement.focus();
+    this.focusSearch();
   }
 
   resetSale(): void {
@@ -429,7 +442,6 @@ export class PosPage implements OnInit {
     this.paidInput.set(null);
     this.paymentMethod.set('Cash');
     this.notes.set('');
-    this.cartOpen.set(false);
   }
 
   private updateLine(line: CartLine, patch: Partial<CartLine>): void {

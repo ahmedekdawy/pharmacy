@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Pharmacy.Application.Common.Interfaces;
+using Pharmacy.Infrastructure.Branding;
 using Pharmacy.Infrastructure.Catalog;
 using Pharmacy.Infrastructure.Identity;
 using Pharmacy.Infrastructure.Persistence;
@@ -33,6 +34,32 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromMinutes(2);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("PharmacyApp/1.0");
+        });
+
+        services.AddScoped<ITeraboxStorage, TeraboxStorage>();
+        services.AddHttpClient(nameof(TeraboxStorage), (sp, client) =>
+        {
+            var terabox = sp.GetRequiredService<IConfiguration>().GetSection("Terabox");
+            var ndus = terabox["Ndus"];
+            var browserId = terabox["BrowserId"];
+            var baseUrl = (terabox["BaseUrl"] ?? "").TrimEnd('/');
+            if (!string.IsNullOrWhiteSpace(ndus))
+            {
+                var cookie = string.IsNullOrWhiteSpace(browserId)
+                    ? $"lang=en; ndus={ndus}"
+                    : $"lang=en; ndus={ndus}; browserid={browserId}";
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", cookie);
+            }
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json, text/plain, */*");
+            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
+            // Terabox's web endpoints reject requests that don't look like they came from
+            // the browser session the ndus/jsToken cookie was captured from.
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            if (!string.IsNullOrWhiteSpace(baseUrl))
+            {
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", $"{baseUrl}/");
+            }
+            client.Timeout = TimeSpan.FromSeconds(30);
         });
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");

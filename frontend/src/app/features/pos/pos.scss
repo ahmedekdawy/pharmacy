@@ -118,8 +118,6 @@ button { cursor: pointer; }
 .warn { color: #8a4b08; font-size: .82rem; margin: 0; }
 .error { color: #c45c4a; margin: 0; }
 
-.mobile-summary, .mobile-only { display: none; }
-
 .modal {
   position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 50;
   display: grid; place-items: center; padding: 1rem;
@@ -131,21 +129,25 @@ button { cursor: pointer; }
 }
 
 @media (max-width: 900px) {
-  .pos { grid-template-columns: 1fr; padding: .75rem; padding-bottom: 5rem; }
-  .cart {
-    position: fixed; inset: 0; top: auto; z-index: 40; max-height: 92vh; border-radius: 1rem 1rem 0 0;
-    transform: translateY(105%); transition: transform 200ms ease; box-shadow: 0 -8px 30px rgba(0, 0, 0, .2);
-    &.open { transform: none; }
-  }
-  .mobile-only { display: inline-block; }
-  .mobile-summary {
-    display: flex; justify-content: space-between; align-items: center;
-    position: fixed; inset-inline: .75rem; bottom: .75rem; z-index: 30;
-    border: 0; border-radius: .8rem; padding: .95rem 1.1rem; font-size: 1.05rem;
-    background: var(--accent); color: #fff; box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
-  }
+  // One continuous scrolling section: catalog first, cart/checkout stacked right after it
+  // (DOM order), instead of a separate sliding sheet the cashier has to open/close.
+  .pos { grid-template-columns: 1fr; padding: .75rem; }
+  .bar { flex-wrap: wrap; }
+  .cart { position: static; max-height: none; }
   .results li { flex-direction: column; align-items: stretch; }
   .unit-buttons { justify-content: stretch; button { flex: 1; } }
+
+  // Stepper + price + total can be wider than a narrow phone screen; wrap instead of
+  // clipping or forcing horizontal scroll inside a cart line.
+  .line-row { flex-wrap: wrap; }
+  .total { flex: 1 0 100%; text-align: end; }
+
+  // Comfortable tap targets (~44px) for the smallest, most-tapped controls on a touch screen.
+  .x { width: 2.75rem; height: 2.75rem; display: inline-grid; place-items: center; }
+  .cam { min-width: 2.75rem; }
+  .stepper button { width: 2.75rem; height: 2.75rem; }
+
+  .new-cust { grid-template-columns: 1fr; }
 }
 
 .search-row { display: flex; gap: .5rem; }
@@ -164,4 +166,3 @@ button { cursor: pointer; }
   background: #1f3d2f; color: #fff; padding: .7rem 1.1rem; border-radius: .6rem; z-index: 70;
   box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
 }
-@media (max-width: 900px) { .toast { bottom: 5rem; } }
