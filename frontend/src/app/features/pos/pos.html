@@ -1,4 +1,32 @@
 <section class="pos">
+  <ng-template #alternativesPanel>
+    <ul class="alternatives">
+      @for (opt of alternatives(); track opt.kind === 'own' ? opt.product.id : opt.drug.commercialNameEn) {
+        <li>
+          @if (opt.kind === 'own') {
+            <div class="result-main">
+              <strong>{{ name(opt.product) }}</strong>
+              <small><bdi dir="ltr">{{ opt.product.code }}</bdi> · {{ stockText(opt.product) }}</small>
+            </div>
+            <button type="button" class="btn" (click)="useAlternative(opt.product)">{{ pick('Use this', 'استخدم هذا') }}</button>
+          } @else {
+            <div class="result-main">
+              <strong><bdi dir="ltr">{{ opt.drug.commercialNameEn }}</bdi></strong>
+              <small><bdi>{{ opt.drug.commercialNameAr }}</bdi> · {{ pick('not in your catalog', 'غير موجود بأصنافك') }} · {{ opt.drug.priceEgp | number: '1.2-2' }}</small>
+            </div>
+            @if (auth.hasPermission('Product.Create')) {
+              <button type="button" class="btn" [disabled]="addingDrugKey() === opt.drug.commercialNameEn" (click)="addAlternativeFromCatalog(opt.drug)">
+                {{ addingDrugKey() === opt.drug.commercialNameEn ? pick('Adding…', 'جارٍ الإضافة…') : pick('Add & use', 'أضف واستخدم') }}
+              </button>
+            }
+          }
+        </li>
+      } @empty {
+        <li class="hint">{{ pick('No alternative found for this product.', 'لا يوجد بديل لهذا الصنف.') }}</li>
+      }
+    </ul>
+  </ng-template>
+
   <!-- ============ catalog / search ============ -->
   <div class="catalog">
     <div class="bar">
@@ -48,23 +76,29 @@
     <ul class="results">
       @for (p of results(); track p.id) {
         <li [class.out]="p.stock <= 0">
-          <button type="button" class="result-main" (click)="add(p)">
-            <strong>{{ name(p) }}</strong>
-            <small><bdi dir="ltr">{{ p.code }}</bdi> · {{ stockText(p) }}</small>
-          </button>
-          <div class="unit-buttons">
-            @for (u of units(p); track u) {
-              <button type="button" (click)="add(p, u)">
-                {{ unitName(u) }}<b>{{ priceOf(p, u) | number: '1.2-2' }}</b>
-              </button>
-            }
-            @if (canAddShortage()) {
-              <button type="button" class="shortage-btn" (click)="openShortage(p)"
-                      [attr.title]="pick('Add to shortages', 'إضافة للنواقص')" [attr.aria-label]="pick('Add to shortages', 'إضافة للنواقص') + ': ' + name(p)">
-                + {{ pick('Shortage', 'نواقص') }}
-              </button>
-            }
+          <div class="result-row">
+            <button type="button" class="result-main" (click)="add(p)">
+              <strong>{{ name(p) }}</strong>
+              <small><bdi dir="ltr">{{ p.code }}</bdi> · {{ stockText(p) }}</small>
+            </button>
+            <div class="unit-buttons">
+              @for (u of units(p); track u) {
+                <button type="button" (click)="add(p, u)">
+                  {{ unitName(u) }}<b>{{ priceOf(p, u) | number: '1.2-2' }}</b>
+                </button>
+              }
+              <button type="button" class="alt-toggle" [attr.title]="pick('Alternatives', 'بدائل')" [attr.aria-label]="pick('Alternatives', 'بدائل') + ': ' + name(p)" (click)="toggleResultAlternatives(p)">⇄</button>
+              @if (canAddShortage()) {
+                <button type="button" class="shortage-btn" (click)="openShortage(p)"
+                        [attr.title]="pick('Add to shortages', 'إضافة للنواقص')" [attr.aria-label]="pick('Add to shortages', 'إضافة للنواقص') + ': ' + name(p)">
+                  + {{ pick('Shortage', 'نواقص') }}
+                </button>
+              }
+            </div>
           </div>
+          @if (isAlternativesOpenForResult(p)) {
+            <ng-container *ngTemplateOutlet="alternativesPanel"></ng-container>
+          }
         </li>
       }
       @if (query() && !results().length) {
@@ -84,17 +118,19 @@
       <ul class="results">
         @for (d of catalogSuggestions(); track d.commercialNameEn) {
           <li>
-            <div class="result-main">
-              <strong><bdi dir="ltr">{{ d.commercialNameEn }}</bdi></strong>
-              <small><bdi>{{ d.commercialNameAr }}</bdi> · {{ d.manufacturer }} · {{ d.priceEgp | number: '1.2-2' }}</small>
-            </div>
-            @if (auth.hasPermission('Product.Create')) {
-              <div class="unit-buttons">
-                <button type="button" [disabled]="addingDrugKey() === d.commercialNameEn" (click)="addDrugToProducts(d)">
-                  {{ addingDrugKey() === d.commercialNameEn ? pick('Adding…', 'جارٍ الإضافة…') : pick('Add to products', 'أضف للأصناف') }}
-                </button>
+            <div class="result-row">
+              <div class="result-main">
+                <strong><bdi dir="ltr">{{ d.commercialNameEn }}</bdi></strong>
+                <small><bdi>{{ d.commercialNameAr }}</bdi> · {{ d.manufacturer }} · {{ d.priceEgp | number: '1.2-2' }}</small>
               </div>
-            }
+              @if (auth.hasPermission('Product.Create')) {
+                <div class="unit-buttons">
+                  <button type="button" [disabled]="addingDrugKey() === d.commercialNameEn" (click)="addDrugToProducts(d)">
+                    {{ addingDrugKey() === d.commercialNameEn ? pick('Adding…', 'جارٍ الإضافة…') : pick('Add to products', 'أضف للأصناف') }}
+                  </button>
+                </div>
+              }
+            </div>
           </li>
         }
       </ul>
@@ -133,8 +169,12 @@
         <li [class.short]="shortages().has(l.product.id)">
           <div class="line-top">
             <strong>{{ name(l.product) }}</strong>
+            <button type="button" class="alt-toggle" [attr.title]="pick('Alternatives', 'بدائل')" [attr.aria-label]="pick('Alternatives', 'بدائل')" (click)="toggleAlternatives(l)">⇄</button>
             <button type="button" class="x" (click)="remove(l)" [attr.aria-label]="pick('Remove', 'حذف')">×</button>
           </div>
+          @if (isAlternativesOpenForLine(l)) {
+            <ng-container *ngTemplateOutlet="alternativesPanel"></ng-container>
+          }
           <div class="seg">
             @for (u of units(l.product); track u) {
               <button type="button" [class.on]="l.unit === u" (click)="setUnit(l, u)">{{ unitName(u) }}</button>

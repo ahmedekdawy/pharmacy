@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Subject, Subscription, catchError, debounceTime, map, of, switchMap } from 'rxjs';
 import { ApiService, EgyptianDrug } from '../../core/services/api.service';
@@ -40,7 +40,7 @@ const LOCATION_KEY = 'pharmacy.pos_location';
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [DecimalPipe, BarcodeScanner, ShortageQuickAdd],
+  imports: [DecimalPipe, NgTemplateOutlet, BarcodeScanner, ShortageQuickAdd],
   templateUrl: './pos.html',
   styleUrl: './pos.scss'
 })
@@ -81,6 +81,19 @@ export class PosPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** commercialNameEn of the drug currently being added, if any (there's no stable catalog id). */
   readonly addingDrugKey = signal<string | null>(null);
+
+  /**
+   * Whichever cart line or search result is showing its "alternatives" panel right now (one at
+   * a time) — a cart line swaps in the chosen alternative, a search result just adds it to the
+   * cart as a new line, same as clicking the result itself would.
+   */
+  readonly alternativesContext = signal<{ kind: 'cart'; line: CartLine } | { kind: 'search'; product: PosProduct } | null>(null);
+  readonly alternatives = computed(() => {
+    const context = this.alternativesContext();
+    if (!context) return [];
+    const product = context.kind === 'cart' ? context.line.product : context.product;
+    return findAlternatives(product, this.sync.products(), this.egyptianDrugs.drugs());
+  });
 
   readonly lang = computed(() => this.i18n.language());
 
@@ -317,39 +330,42 @@ export class PosPage implements OnInit, AfterViewInit, OnDestroy {
    * the normal offline outbox, so it works (and queues) even without internet.
    */
   async addDrugToProducts(drug: EgyptianDrug): Promise<void> {
-    this.error.set(null);
     this.addingDrugKey.set(drug.commercialNameEn);
     try {
-      const pack = guessPack(drug);
-      const id = newId();
-      const nameEn = drug.commercialNameEn || drug.scientificName;
-      const nameAr = drug.commercialNameAr || drug.commercialNameEn;
-      const payload = {
-        id,
-        code: uniqueCode(buildProductCode(drug), this.sync.products().map((p) => p.code)),
-        nameEn,
-        nameAr,
-        barcode: null,
-        sellingPrice: Number(drug.priceEgp) || 0,
-        stripsPerBox: pack?.strips ?? 1,
-        unitsPerStrip: pack?.perStrip ?? 1,
-        allowStripSale: false,
-        allowUnitSale: false,
-        stripPrice: null,
-        unitPrice: null
-      };
-
-      const outcome = await this.sync.submit('product.create', payload, `${this.pick('New product', 'صنف جديد')}: ${nameEn}`);
-      if (outcome.kind === 'rejected') {
-        this.error.set(outcome.error);
-        return;
-      }
-
-      const created = this.sync.products().find((p) => p.id === id);
+      const created = await this.createProductFromDrug(drug);
       if (created) this.add(created);
     } finally {
       this.addingDrugKey.set(null);
     }
+  }
+
+  private async createProductFromDrug(drug: EgyptianDrug): Promise<PosProduct | null> {
+    this.error.set(null);
+    const pack = guessPack(drug);
+    const id = newId();
+    const nameEn = drug.commercialNameEn || drug.scientificName;
+    const nameAr = drug.commercialNameAr || drug.commercialNameEn;
+    const payload = {
+      id,
+      code: uniqueCode(buildProductCode(drug), this.sync.products().map((p) => p.code)),
+      nameEn,
+      nameAr,
+      barcode: null,
+      sellingPrice: Number(drug.priceEgp) || 0,
+      stripsPerBox: pack?.strips ?? 1,
+      unitsPerStrip: pack?.perStrip ?? 1,
+      allowStripSale: false,
+      allowUnitSale: false,
+      stripPrice: null,
+      unitPrice: null
+    };
+
+    const outcome = await this.sync.submit('product.create', payload, `${this.pick('New product', 'صنف جديد')}: ${nameEn}`);
+    if (outcome.kind === 'rejected') {
+      this.error.set(outcome.error);
+      return null;
+    }
+    return this.sync.products().find((p) => p.id === id) ?? null;
   }
 
   onSearchEnter(): void {
@@ -395,6 +411,51 @@ export class PosPage implements OnInit, AfterViewInit, OnDestroy {
 
   remove(line: CartLine): void {
     this.cart.update((lines) => lines.filter((l) => l.key !== line.key));
+    const context = this.alternativesContext();
+    if (context?.kind === 'cart' && context.line.key === line.key) this.alternativesContext.set(null);
+  }
+
+  isAlternativesOpenForLine(line: CartLine): boolean {
+    const context = this.alternativesContext();
+    return context?.kind === 'cart' && context.line.key === line.key;
+  }
+
+  isAlternativesOpenForResult(product: PosProduct): boolean {
+    const context = this.alternativesContext();
+    return context?.kind === 'search' && context.product.id === product.id;
+  }
+
+  toggleAlternatives(line: CartLine): void {
+    this.alternativesContext.set(this.isAlternativesOpenForLine(line) ? null : { kind: 'cart', line });
+  }
+
+  toggleResultAlternatives(product: PosProduct): void {
+    this.alternativesContext.set(this.isAlternativesOpenForResult(product) ? null : { kind: 'search', product });
+  }
+
+  /** Swaps the cart line, or adds a fresh line, to this other (same active ingredient) product. */
+  useAlternative(alt: PosProduct): void {
+    const context = this.alternativesContext();
+    if (!context) return;
+    if (context.kind === 'cart') {
+      const unit = allowedUnits(alt).includes(context.line.unit) ? context.line.unit : SaleUnit.Box;
+      this.updateLine(context.line, { product: alt, unit, price: unitPrice(alt, unit) });
+    } else {
+      this.add(alt);
+    }
+    this.alternativesContext.set(null);
+  }
+
+  /** A catalog-only equivalent (not yet one of this pharmacy's products) picked from the alternatives panel. */
+  async addAlternativeFromCatalog(drug: EgyptianDrug): Promise<void> {
+    if (!this.alternativesContext()) return;
+    this.addingDrugKey.set(drug.commercialNameEn);
+    try {
+      const created = await this.createProductFromDrug(drug);
+      if (created) this.useAlternative(created);
+    } finally {
+      this.addingDrugKey.set(null);
+    }
   }
 
   canAddShortage(): boolean {
@@ -566,6 +627,7 @@ export class PosPage implements OnInit, AfterViewInit, OnDestroy {
     this.paidInput.set(null);
     this.paymentMethod.set('Cash');
     this.notes.set('');
+    this.alternativesContext.set(null);
   }
 
   private updateLine(line: CartLine, patch: Partial<CartLine>): void {
@@ -594,4 +656,44 @@ function pickCatalogMatch(product: PosProduct, matches: EgyptianDrug[]): Egyptia
       (d) => normalizeDrugName(d.commercialNameEn) === target || normalizeDrugName(d.commercialNameAr) === target
     ) ?? null
   );
+}
+
+function normalizeScientificName(s: string): string {
+  return s.toUpperCase().replace(/[^A-Z0-9؀-ۿ]+/g, ' ').trim();
+}
+
+export type AlternativeOption = { kind: 'own'; product: PosProduct } | { kind: 'catalog'; drug: EgyptianDrug };
+
+/**
+ * Equivalents (same active ingredient) for the selected product, found via the external drug
+ * reference list since products here carry no scientific name of their own. Needs the selected
+ * product to exactly match a catalog entry (same as the price check); if it doesn't, there's
+ * nothing to safely compare against, so this returns nothing rather than guessing from the name
+ * alone. Equivalents already in this pharmacy's own catalog come first (most in-stock first);
+ * ones only in the reference list — not added as a product yet — come after, so they can be
+ * added on the spot instead of just being hidden.
+ */
+function findAlternatives(product: PosProduct, ownProducts: PosProduct[], catalog: EgyptianDrug[]): AlternativeOption[] {
+  const selfMatch = pickCatalogMatch(product, catalog);
+  const scientific = selfMatch ? normalizeScientificName(selfMatch.scientificName) : '';
+  if (!scientific) return [];
+
+  const selfKey = normalizeDrugName(product.nameEn || product.nameAr);
+  const seen = new Set<string>();
+  const options: AlternativeOption[] = [];
+
+  for (const drug of catalog) {
+    if (normalizeScientificName(drug.scientificName) !== scientific) continue;
+    const key = normalizeDrugName(drug.commercialNameEn || drug.commercialNameAr);
+    if (!key || key === selfKey || seen.has(key)) continue;
+    seen.add(key);
+
+    const owned = ownProducts.find((p) => p.id !== product.id && normalizeDrugName(p.nameEn || p.nameAr) === key);
+    options.push(owned ? { kind: 'own', product: owned } : { kind: 'catalog', drug });
+  }
+
+  const own = options.filter((o): o is { kind: 'own'; product: PosProduct } => o.kind === 'own');
+  own.sort((a, b) => b.product.stock - a.product.stock);
+  const catalogOnly = options.filter((o) => o.kind === 'catalog');
+  return [...own, ...catalogOnly];
 }

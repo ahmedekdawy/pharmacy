@@ -2,7 +2,7 @@
 
 .pos {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
   padding: 1rem;
   align-items: start;
@@ -32,10 +32,11 @@ button { cursor: pointer; }
 
 .results { list-style: none; padding: 0; margin: .6rem 0 0; display: grid; gap: .4rem; }
 .results li {
-  display: flex; gap: .5rem; align-items: center; justify-content: space-between;
+  display: grid; gap: .4rem;
   background: var(--surface); border: 1px solid var(--border); border-radius: .55rem; padding: .35rem;
   &.out { opacity: .6; }
 }
+.result-row { display: flex; gap: .5rem; align-items: center; justify-content: space-between; }
 .result-main {
   flex: 1; text-align: start; background: none; border: 0; padding: .4rem;
   display: flex; flex-direction: column; gap: .15rem; min-width: 0;
@@ -72,8 +73,17 @@ button { cursor: pointer; }
   border: 1px solid var(--border); border-radius: .55rem; padding: .5rem; display: grid; gap: .4rem;
   &.short { border-color: #d9a441; }
 }
-.line-top { display: flex; justify-content: space-between; gap: .5rem; }
+.line-top { display: flex; align-items: center; gap: .6rem; strong { flex: 1; min-width: 0; } }
 .x { background: none; border: 0; font-size: 1.2rem; line-height: 1; color: var(--muted); }
+
+.alternatives {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem;
+  li {
+    display: flex; gap: .5rem; align-items: center; justify-content: space-between;
+    background: var(--surface-muted); border: 1px solid var(--border); border-radius: .45rem; padding: .35rem .5rem;
+  }
+  small { color: var(--muted); }
+}
 .line-row { display: flex; align-items: center; gap: .5rem; }
 .stepper {
   display: flex; align-items: center;
@@ -142,7 +152,7 @@ button { cursor: pointer; }
   .pos { grid-template-columns: 1fr; padding: .75rem; }
   .bar { flex-wrap: wrap; }
   .cart { position: static; max-height: none; }
-  .results li { flex-direction: column; align-items: stretch; }
+  .result-row { flex-direction: column; align-items: stretch; }
   .unit-buttons { justify-content: stretch; button { flex: 1; } }
 
   // Stepper + price + total can be wider than a narrow phone screen; wrap instead of
@@ -160,6 +170,11 @@ button { cursor: pointer; }
 
 .search-row { display: flex; gap: .5rem; }
 .cam { border: 1px solid var(--border); background: var(--surface-muted); border-radius: .45rem; padding: 0 .9rem; font-size: 1.2rem; }
+
+.alt-toggle {
+  border: 1px solid var(--border); background: var(--surface-muted); border-radius: .45rem;
+  padding: 0 .6rem; font-size: 1rem; color: var(--accent-strong);
+}
 
 .shortage-btn, .unit-buttons .shortage-btn {
   border: 1px dashed #c98a2b; background: transparent; color: #8a4b08;
