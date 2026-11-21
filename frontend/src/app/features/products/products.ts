@@ -1,25 +1,19 @@
 import { DecimalPipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { ApiResponse, ApiService, ProductDto } from '../../core/services/api.service';
+import { Subject, Subscription, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
+import { ApiService, EgyptianDrug, ProductDto } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
+import { SyncService } from '../../core/offline/sync.service';
+import { PosProduct } from '../../core/offline/models';
+import { buildProductCode, guessPack, uniqueCode } from '../../core/catalog/drug-product-mapping';
 import { IconButton } from '../../shared/ui/icon-button';
 import { BarcodeScanner } from '../../shared/ui/barcode-scanner';
 import { apiErrorMessage } from '../../core/http-error';
 
-export interface EgyptianDrug {
-  commercialNameEn: string;
-  commercialNameAr: string;
-  scientificName: string;
-  manufacturer: string;
-  drugClass: string;
-  route: string;
-  priceEgp: number;
-}
+export type { EgyptianDrug };
 
 @Component({
   selector: 'app-products',
@@ -30,24 +24,35 @@ export interface EgyptianDrug {
 })
 export class Products implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
-  private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   private readonly search$ = new Subject<string>();
   private searchSub?: Subscription;
   readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
+  readonly sync = inject(SyncService);
 
   readonly products = signal<ProductDto[]>([]);
+  readonly listSearch = signal('');
   readonly catalogResults = signal<EgyptianDrug[]>([]);
   readonly selectedDrug = signal<EgyptianDrug | null>(null);
   readonly editingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly offlineNotice = signal<string | null>(null);
   readonly loading = signal(false);
   readonly catalogLoading = signal(false);
   readonly catalogOpen = signal(false);
   readonly codeError = signal<string | null>(null);
   readonly packGuess = signal<string | null>(null);
   readonly cameraOpen = signal(false);
+
+  /** Filters the already-loaded list client-side, so this keeps working offline too. */
+  readonly filteredProducts = computed(() => {
+    const term = this.listSearch().trim().toLowerCase();
+    if (!term) return this.products();
+    return this.products().filter((p) =>
+      `${p.code} ${p.nameEn} ${p.nameAr} ${p.barcode ?? ''}`.toLowerCase().includes(term)
+    );
+  });
 
   readonly catalogSearch = this.fb.nonNullable.control('');
   readonly form = this.fb.group({
@@ -77,29 +82,35 @@ export class Products implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.reload();
+    // Loads the local (IndexedDB) product snapshot first, so reload() has something to fall
+    // back to immediately if the pharmacy is offline.
+    void this.sync.init().then(() => this.reload());
     this.searchSub = this.search$
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
         switchMap((term) => {
           this.catalogLoading.set(true);
-          return this.http.get<ApiResponse<EgyptianDrug[]>>(
-            `${environment.apiBaseUrl}/catalog/egyptian-drugs`,
-            { params: { search: term, limit: 20 } }
-          );
+          // This external drug registry has no offline copy; catchError turns a failed
+          // request into a normal (null) result instead of killing this subscription —
+          // otherwise one failed search (e.g. offline) would silently break every search
+          // after it, even once back online.
+          return this.api
+            .searchEgyptianDrugs(term, 20)
+            .pipe(catchError((err) => of({ failed: true as const, err })));
         })
       )
-      .subscribe({
-        next: (res) => {
-          this.catalogResults.set(res.data ?? []);
-          this.catalogOpen.set(true);
-          this.catalogLoading.set(false);
-        },
-        error: () => {
-          this.catalogLoading.set(false);
-          this.error.set(this.i18n.pick('Unable to search Egyptian drug catalog.', 'تعذر البحث في دليل الأدوية المصرية.'));
+      .subscribe((res) => {
+        this.catalogLoading.set(false);
+        if ('failed' in res) {
+          this.catalogResults.set([]);
+          if (!(res.err instanceof HttpErrorResponse) || res.err.status !== 0) {
+            this.error.set(this.i18n.pick('Unable to search Egyptian drug catalog.', 'تعذر البحث في دليل الأدوية المصرية.'));
+          }
+          return;
         }
+        this.catalogResults.set(res.data ?? []);
+        this.catalogOpen.set(true);
       });
   }
 
@@ -204,12 +215,14 @@ export class Products implements OnInit, OnDestroy {
 
   reload(): void {
     this.loading.set(true);
+    this.offlineNotice.set(null);
     this.api.searchProducts('', 1, 100).subscribe({
       next: (res) => {
         this.products.set(res.data?.items ?? []);
         this.loading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        if (this.showOfflineCache(err)) return;
         this.error.set(this.i18n.pick(
           'Unable to load products. Ensure API is running and tenant header is set.',
           'تعذر تحميل الأصناف. تأكد من تشغيل الخادم وتحديد كود الصيدلية.'
@@ -217,6 +230,25 @@ export class Products implements OnInit, OnDestroy {
         this.loading.set(false);
       }
     });
+  }
+
+  /**
+   * When the backend can't be reached, fall back to the product snapshot the device already
+   * downloaded for the POS (kept in IndexedDB by {@link SyncService}), so this list — and
+   * searching it — keeps working offline. Returns false (does nothing) for a real server error.
+   */
+  private showOfflineCache(err: unknown): boolean {
+    const isNetworkError = err instanceof HttpErrorResponse && (err.status === 0 || err.status === 408);
+    const cached = this.sync.products();
+    if (!isNetworkError || !cached.length) return false;
+
+    this.products.set(cached.map(posProductToDto));
+    this.offlineNotice.set(this.i18n.pick(
+      'Offline — showing the catalog last downloaded for the POS.',
+      'غير متصل بالإنترنت — يعرض آخر نسخة من الأصناف تم تحميلها لنقطة البيع.'
+    ));
+    this.loading.set(false);
+    return true;
   }
 
   submit(): void {
@@ -295,36 +327,24 @@ export class Products implements OnInit, OnDestroy {
 }
 
 /**
- * Code from the whole commercial name (pack size included) so sizes of the same drug get different codes:
- * "Panadol Advance 500mg 24 tab" → EG-PANADOL-ADVANCE-500MG-24-TAB. Backend limit is 64 chars.
+ * The POS snapshot has no `isActive`/`categoryId` (it only ever holds sellable products), so
+ * those are filled with reasonable defaults when it's reused here as an offline fallback.
  */
-export function buildProductCode(drug: EgyptianDrug): string {
-  const source = (drug.commercialNameEn || drug.scientificName || 'DRUG').toUpperCase();
-  const slug = source.replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56).replace(/-+$/, '') || 'DRUG';
-  return `EG-${slug}`;
-}
-
-/** Appends -2, -3… when the code is already taken. */
-export function uniqueCode(code: string, existing: string[]): string {
-  const taken = new Set(existing.map((c) => c.toUpperCase()));
-  if (!taken.has(code.toUpperCase())) return code;
-  for (let i = 2; ; i++) {
-    const candidate = `${code}-${i}`;
-    if (!taken.has(candidate.toUpperCase())) return candidate;
-  }
-}
-
-/**
- * Reads the pack size from the drug name ("24 f.c. tabs", "30 caps", "علبة 20 قرص").
- * Blister strips are usually 10 units, so 20/30 → 2/3 strips of 10; other counts stay as one strip.
- */
-export function guessPack(drug: EgyptianDrug): { total: number; strips: number; perStrip: number } | null {
-  const text = `${drug.commercialNameEn} ${drug.commercialNameAr}`;
-  const match =
-    /(\d{1,4})\s*(?:f\.?\s*c\.?\s*)?(?:tabs?|tablets?|caps?|capsules?|cap\.|sachets?|supp)\b/i.exec(text) ??
-    /(\d{1,4})\s*(?:قرص|أقراص|اقراص|كبسول|كبسولة|كيس|لبوس)/.exec(text);
-  const total = match ? Number(match[1]) : 0;
-  if (!total || total > 1000) return null;
-  const strips = total > 10 && total % 10 === 0 ? total / 10 : 1;
-  return { total, strips, perStrip: total / strips };
+function posProductToDto(p: PosProduct): ProductDto {
+  return {
+    id: p.id,
+    code: p.code,
+    nameAr: p.nameAr,
+    nameEn: p.nameEn,
+    barcode: p.barcode ?? null,
+    categoryId: null,
+    sellingPrice: p.sellingPrice,
+    isActive: true,
+    stripsPerBox: p.stripsPerBox,
+    unitsPerStrip: p.unitsPerStrip,
+    allowStripSale: p.allowStripSale,
+    allowUnitSale: p.allowUnitSale,
+    stripPrice: p.stripPrice ?? null,
+    unitPrice: p.unitPrice ?? null
+  };
 }

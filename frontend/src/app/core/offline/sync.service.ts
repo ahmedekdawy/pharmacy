@@ -175,6 +175,16 @@ export class SyncService {
     void this.refreshSnapshot().catch(() => undefined);
   }
 
+  /**
+   * Reflects a price change already saved on the server (e.g. the cashier checked the
+   * product's latest price against an external catalog in POS and applied it) into the
+   * local snapshot, so the new price shows immediately without waiting for the next sync.
+   */
+  async updateCachedProductPrice(productId: string, sellingPrice: number): Promise<void> {
+    this.products.update((list) => list.map((p) => (p.id === productId ? { ...p, sellingPrice } : p)));
+    await this.persistSnapshot();
+  }
+
   // ---------------------------------------------------------------- receipts
 
   async saveReceipt(receipt: LocalReceipt): Promise<void> {

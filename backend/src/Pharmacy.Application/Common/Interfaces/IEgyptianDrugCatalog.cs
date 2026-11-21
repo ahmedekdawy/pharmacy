@@ -12,4 +12,7 @@ public sealed record EgyptianDrugDto(
 public interface IEgyptianDrugCatalog
 {
     Task<IReadOnlyList<EgyptianDrugDto>> SearchAsync(string? search, int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>The full reference list, for clients that cache it locally to search offline.</summary>
+    Task<IReadOnlyList<EgyptianDrugDto>> GetAllAsync(CancellationToken cancellationToken = default);
 }

@@ -34,6 +34,9 @@ public sealed class EgyptianDrugCatalog(IHttpClientFactory httpClientFactory, IL
             .ToList();
     }
 
+    public Task<IReadOnlyList<EgyptianDrugDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        EnsureLoadedAsync(cancellationToken);
+
     private async Task<IReadOnlyList<EgyptianDrugDto>> EnsureLoadedAsync(CancellationToken cancellationToken)
     {
         if (_cache is not null)

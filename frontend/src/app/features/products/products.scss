@@ -189,6 +189,16 @@ form {
   color: #c45c4a;
 }
 
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.list-search {
+  margin-bottom: 0.75rem;
+  max-width: 24rem;
+}
+
 .field {
   display: flex;
   flex-direction: column;

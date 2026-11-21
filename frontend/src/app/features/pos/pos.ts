@@ -1,8 +1,13 @@
 import { DecimalPipe } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Subject, Subscription, catchError, debounceTime, map, of, switchMap } from 'rxjs';
+import { ApiService, EgyptianDrug } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalizationService } from '../../core/services/localization.service';
 import { SyncService } from '../../core/offline/sync.service';
+import { EgyptianDrugCatalogService } from '../../core/catalog/egyptian-drug-catalog.service';
+import { buildProductCode, guessPack, uniqueCode } from '../../core/catalog/drug-product-mapping';
+import { apiErrorMessage } from '../../core/http-error';
 import {
   LocalReceipt,
   PaymentMethod,
@@ -39,10 +44,12 @@ const LOCATION_KEY = 'pharmacy.pos_location';
   templateUrl: './pos.html',
   styleUrl: './pos.scss'
 })
-export class PosPage implements OnInit, AfterViewInit {
+export class PosPage implements OnInit, AfterViewInit, OnDestroy {
   readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
   readonly sync = inject(SyncService);
+  private readonly api = inject(ApiService);
+  private readonly egyptianDrugs = inject(EgyptianDrugCatalogService);
   private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
 
   readonly Unit = SaleUnit;
@@ -66,7 +73,47 @@ export class PosPage implements OnInit, AfterViewInit {
   readonly toast = signal<string | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
 
+  /** Set when the one exact search match's catalog price differs from what's charged here. */
+  readonly priceCheck = signal<{ product: PosProduct; latest: EgyptianDrug } | null>(null);
+  readonly priceCheckBusy = signal(false);
+  private readonly priceCheckRequest$ = new Subject<PosProduct>();
+  private readonly priceCheckSub: Subscription;
+
+  /** commercialNameEn of the drug currently being added, if any (there's no stable catalog id). */
+  readonly addingDrugKey = signal<string | null>(null);
+
   readonly lang = computed(() => this.i18n.language());
+
+  constructor() {
+    // Only ever checks the single exact match, not every row of a broad search — this is an
+    // external, best-effort reference list, so one confident comparison beats several noisy ones.
+    this.priceCheckSub = this.priceCheckRequest$
+      .pipe(
+        debounceTime(400),
+        switchMap((product) =>
+          this.api.searchEgyptianDrugs(product.nameEn || product.nameAr, 5).pipe(
+            map((res) => ({ product, latest: pickCatalogMatch(product, res.data ?? []) })),
+            catchError(() => of(null))
+          )
+        )
+      )
+      .subscribe((result) => {
+        if (!result?.latest || round2(result.latest.priceEgp) === round2(result.product.sellingPrice)) {
+          this.priceCheck.set(null);
+          return;
+        }
+        this.priceCheck.set({ product: result.product, latest: result.latest });
+      });
+
+    effect(() => {
+      const matches = this.results();
+      if (!this.sync.online() || matches.length !== 1 || !this.auth.hasPermission('Product.Edit')) {
+        this.priceCheck.set(null);
+        return;
+      }
+      this.priceCheckRequest$.next(matches[0]);
+    });
+  }
 
   readonly results = computed(() => {
     const term = this.query().trim().toLowerCase();
@@ -81,6 +128,13 @@ export class PosPage implements OnInit, AfterViewInit {
         return words.every((w) => text.includes(w));
       })
       .slice(0, 30);
+  });
+
+  /** Nothing in the pharmacy's own catalog matched — offer what the drug reference list has. */
+  readonly catalogSuggestions = computed(() => {
+    const term = this.query().trim();
+    if (!term || this.results().length) return [];
+    return this.egyptianDrugs.search(term, 8);
   });
 
   readonly customerResults = computed(() => {
@@ -157,10 +211,15 @@ export class PosPage implements OnInit, AfterViewInit {
       }
     });
     if (!this.sync.products().length) void this.sync.sync();
+    void this.egyptianDrugs.init();
   }
 
   ngAfterViewInit(): void {
     this.focusSearch();
+  }
+
+  ngOnDestroy(): void {
+    this.priceCheckSub.unsubscribe();
   }
 
   /**
@@ -226,6 +285,71 @@ export class PosPage implements OnInit, AfterViewInit {
     this.cameraOpen.set(false);
     this.query.set(raw);
     this.onSearchEnter();
+  }
+
+  dismissPriceCheck(): void {
+    this.priceCheck.set(null);
+  }
+
+  applyLatestPrice(): void {
+    const check = this.priceCheck();
+    if (!check) return;
+    const price = round2(check.latest.priceEgp);
+
+    this.priceCheckBusy.set(true);
+    this.api.updateProductPrice(check.product.id, price).subscribe({
+      next: async () => {
+        await this.sync.updateCachedProductPrice(check.product.id, price);
+        this.priceCheckBusy.set(false);
+        this.priceCheck.set(null);
+        this.showToast(this.pick(`Price updated to ${price}.`, `تم تحديث السعر إلى ${price}.`));
+      },
+      error: (err) => {
+        this.priceCheckBusy.set(false);
+        this.error.set(apiErrorMessage(err, this.pick('Could not update the price.', 'تعذر تحديث السعر.')));
+      }
+    });
+  }
+
+  /**
+   * Creates a product from a drug reference-list match and drops it straight into the cart —
+   * the whole point of searching it mid-sale is to sell it, not just file it away. Goes through
+   * the normal offline outbox, so it works (and queues) even without internet.
+   */
+  async addDrugToProducts(drug: EgyptianDrug): Promise<void> {
+    this.error.set(null);
+    this.addingDrugKey.set(drug.commercialNameEn);
+    try {
+      const pack = guessPack(drug);
+      const id = newId();
+      const nameEn = drug.commercialNameEn || drug.scientificName;
+      const nameAr = drug.commercialNameAr || drug.commercialNameEn;
+      const payload = {
+        id,
+        code: uniqueCode(buildProductCode(drug), this.sync.products().map((p) => p.code)),
+        nameEn,
+        nameAr,
+        barcode: null,
+        sellingPrice: Number(drug.priceEgp) || 0,
+        stripsPerBox: pack?.strips ?? 1,
+        unitsPerStrip: pack?.perStrip ?? 1,
+        allowStripSale: false,
+        allowUnitSale: false,
+        stripPrice: null,
+        unitPrice: null
+      };
+
+      const outcome = await this.sync.submit('product.create', payload, `${this.pick('New product', 'صنف جديد')}: ${nameEn}`);
+      if (outcome.kind === 'rejected') {
+        this.error.set(outcome.error);
+        return;
+      }
+
+      const created = this.sync.products().find((p) => p.id === id);
+      if (created) this.add(created);
+    } finally {
+      this.addingDrugKey.set(null);
+    }
   }
 
   onSearchEnter(): void {
@@ -451,4 +575,23 @@ export class PosPage implements OnInit, AfterViewInit {
   private productById(id: string): PosProduct | undefined {
     return this.sync.products().find((p) => p.id === id);
   }
+}
+
+function normalizeDrugName(s: string): string {
+  return s.toUpperCase().replace(/[^A-Z0-9؀-ۿ]+/g, ' ').trim();
+}
+
+/**
+ * Only an exact (normalized) name match counts — this external catalog is matched by name
+ * alone (no stable id links a product back to its catalog entry), so anything looser risks
+ * suggesting the wrong drug's price.
+ */
+function pickCatalogMatch(product: PosProduct, matches: EgyptianDrug[]): EgyptianDrug | null {
+  const target = normalizeDrugName(product.nameEn || product.nameAr);
+  if (!target) return null;
+  return (
+    matches.find(
+      (d) => normalizeDrugName(d.commercialNameEn) === target || normalizeDrugName(d.commercialNameAr) === target
+    ) ?? null
+  );
 }

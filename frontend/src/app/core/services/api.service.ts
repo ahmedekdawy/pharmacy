@@ -43,6 +43,16 @@ export interface ProductPackFields {
   unitPrice?: number | null;
 }
 
+export interface EgyptianDrug {
+  commercialNameEn: string;
+  commercialNameAr: string;
+  scientificName: string;
+  manufacturer: string;
+  drugClass: string;
+  route: string;
+  priceEgp: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
@@ -80,7 +90,22 @@ export class ApiService {
     return this.http.put<ApiResponse<{ id: string }>>(`${this.baseUrl}/products/${id}`, body);
   }
 
+  updateProductPrice(id: string, sellingPrice: number): Observable<ApiResponse<{ id: string }>> {
+    return this.http.patch<ApiResponse<{ id: string }>>(`${this.baseUrl}/products/${id}/price`, { sellingPrice });
+  }
+
   deleteProduct(id: string): Observable<ApiResponse<{ id: string }>> {
     return this.http.delete<ApiResponse<{ id: string }>>(`${this.baseUrl}/products/${id}`);
+  }
+
+  searchEgyptianDrugs(search: string, limit = 20): Observable<ApiResponse<EgyptianDrug[]>> {
+    return this.http.get<ApiResponse<EgyptianDrug[]>>(`${this.baseUrl}/catalog/egyptian-drugs`, {
+      params: { search, limit }
+    });
+  }
+
+  /** The whole reference list, for clients that cache it locally to search offline. */
+  getAllEgyptianDrugs(): Observable<ApiResponse<EgyptianDrug[]>> {
+    return this.http.get<ApiResponse<EgyptianDrug[]>>(`${this.baseUrl}/catalog/egyptian-drugs/all`);
   }
 }

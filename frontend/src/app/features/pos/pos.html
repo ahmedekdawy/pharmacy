@@ -78,6 +78,45 @@
         </li>
       }
     </ul>
+
+    @if (catalogSuggestions().length) {
+      <p class="hint catalog-hint">{{ pick('Not in your catalog — found in the Egyptian drug list:', 'غير موجود في أصنافك — موجود في دليل الأدوية المصرية:') }}</p>
+      <ul class="results">
+        @for (d of catalogSuggestions(); track d.commercialNameEn) {
+          <li>
+            <div class="result-main">
+              <strong><bdi dir="ltr">{{ d.commercialNameEn }}</bdi></strong>
+              <small><bdi>{{ d.commercialNameAr }}</bdi> · {{ d.manufacturer }} · {{ d.priceEgp | number: '1.2-2' }}</small>
+            </div>
+            @if (auth.hasPermission('Product.Create')) {
+              <div class="unit-buttons">
+                <button type="button" [disabled]="addingDrugKey() === d.commercialNameEn" (click)="addDrugToProducts(d)">
+                  {{ addingDrugKey() === d.commercialNameEn ? pick('Adding…', 'جارٍ الإضافة…') : pick('Add to products', 'أضف للأصناف') }}
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    @if (auth.hasPermission('Product.Edit')) {
+      @if (priceCheck(); as pc) {
+        <div class="price-check">
+          <span>
+            {{ pick('Latest catalog price for', 'آخر سعر في الدليل لـ') }} <bdi dir="ltr">{{ pc.latest.commercialNameEn }}</bdi>:
+            <b>{{ pc.latest.priceEgp | number: '1.2-2' }}</b>
+            <small>({{ pick('current', 'الحالي') }} {{ pc.product.sellingPrice | number: '1.2-2' }})</small>
+          </span>
+          <div class="price-check-actions">
+            <button type="button" class="btn primary" [disabled]="priceCheckBusy()" (click)="applyLatestPrice()">
+              {{ priceCheckBusy() ? pick('Updating…', 'جارٍ التحديث…') : pick('Update price', 'تحديث السعر') }}
+            </button>
+            <button type="button" class="link" [disabled]="priceCheckBusy()" (click)="dismissPriceCheck()">{{ pick('Dismiss', 'تجاهل') }}</button>
+          </div>
+        </div>
+      }
+    }
   </div>
 
   <!-- ============ cart / checkout ============ -->

@@ -24,6 +24,12 @@ public sealed class EgyptianDrugsController(IMediator mediator) : ControllerBase
         => Ok(ApiResponse<object>.Ok(
             await mediator.Send(new SearchEgyptianDrugsQuery(search, limit), cancellationToken)));
 
+    /// <summary>Bulk fetch for clients (POS) that cache the whole list to search it offline.</summary>
+    [HttpGet("all")]
+    [RequirePermission(PermissionCodes.ProductView)]
+    public async Task<ActionResult<ApiResponse<object>>> All(CancellationToken cancellationToken = default)
+        => Ok(ApiResponse<object>.Ok(await mediator.Send(new GetAllEgyptianDrugsQuery(), cancellationToken)));
+
     /// <summary>
     /// Look up a scanned code (EAN-13 or GS1 DataMatrix). Passed as a query string because
     /// DataMatrix content can include characters that are not valid in a URL path.

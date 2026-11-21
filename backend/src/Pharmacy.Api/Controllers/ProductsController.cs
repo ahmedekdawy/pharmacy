@@ -6,6 +6,7 @@ using Pharmacy.Api.Authorization;
 using Pharmacy.Application.Catalog.Products.Commands.CreateProduct;
 using Pharmacy.Application.Catalog.Products.Commands.DeleteProduct;
 using Pharmacy.Application.Catalog.Products.Commands.UpdateProduct;
+using Pharmacy.Application.Catalog.Products.Commands.UpdateProductPrice;
 using Pharmacy.Application.Catalog.Products.Queries.SearchProducts;
 using Pharmacy.Domain.Identity;
 using Pharmacy.Shared.Results;
@@ -66,6 +67,21 @@ public sealed class ProductsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { id }));
     }
 
+    /// <summary>
+    /// Updates only the box price, e.g. when the cashier checks a product's latest price
+    /// against an external catalog and chooses to apply it. Never touches anything else.
+    /// </summary>
+    [HttpPatch("{id:guid}/price")]
+    [RequirePermission(PermissionCodes.ProductEdit)]
+    public async Task<ActionResult<ApiResponse<object>>> UpdatePrice(
+        Guid id,
+        [FromBody] UpdateProductPriceRequest body,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new UpdateProductPriceCommand(id, body.SellingPrice), cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { id }));
+    }
+
     [HttpDelete("{id:guid}")]
     [RequirePermission(PermissionCodes.ProductDelete)]
     public async Task<ActionResult<ApiResponse<object>>> Delete(Guid id, CancellationToken cancellationToken)
@@ -90,3 +106,5 @@ public sealed record UpdateProductRequest(
     bool AllowUnitSale = false,
     decimal? StripPrice = null,
     decimal? UnitPrice = null);
+
+public sealed record UpdateProductPriceRequest(decimal SellingPrice);

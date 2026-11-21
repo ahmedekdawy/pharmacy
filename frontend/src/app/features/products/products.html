@@ -7,6 +7,9 @@
   @if (error()) {
     <p class="error">{{ error() }}</p>
   }
+  @if (offlineNotice()) {
+    <p class="hint">{{ offlineNotice() }}</p>
+  }
 
   @if (!editingId()) {
     <div class="catalog">
@@ -142,8 +145,18 @@
   @if (loading()) {
     <p>{{ t('COMMON.LOADING') }}</p>
   } @else {
+    <label class="field list-search">
+      <span class="field-label">{{ i18n.pick('Search your products', 'بحث في أصنافك') }}</span>
+      <input
+        type="search"
+        dir="ltr"
+        [value]="listSearch()"
+        (input)="listSearch.set($any($event.target).value)"
+        [placeholder]="i18n.pick('Name, code or barcode…', 'الاسم أو الكود أو الباركود…')"
+      />
+    </label>
     <ul class="product-list">
-      @for (product of products(); track product.id) {
+      @for (product of filteredProducts(); track product.id) {
         <li>
           <div class="product-meta">
             <strong><bdi dir="ltr">{{ product.code }}</bdi></strong>
@@ -164,7 +177,13 @@
           </div>
         </li>
       } @empty {
-        <li class="empty-state">{{ i18n.pick('No products yet. Search the drug catalog above to add one.', 'لا توجد أصناف بعد. ابحث في دليل الأدوية بالأعلى لإضافة صنف.') }}</li>
+        <li class="empty-state">
+          @if (listSearch().trim() && products().length) {
+            {{ i18n.pick('No products match this search.', 'لا توجد أصناف مطابقة لهذا البحث.') }}
+          } @else {
+            {{ i18n.pick('No products yet. Search the drug catalog above to add one.', 'لا توجد أصناف بعد. ابحث في دليل الأدوية بالأعلى لإضافة صنف.') }}
+          }
+        </li>
       }
     </ul>
   }
